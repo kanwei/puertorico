@@ -22,9 +22,7 @@
         "</html>")})
 
 (defn handler [request]
-  (if (= "/" (:uri request))
-      (response/redirect "/help.html")
-      (render-app)))
+  (render-app))
 
 (def app 
   (-> handler

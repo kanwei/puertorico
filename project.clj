@@ -6,7 +6,7 @@
                  [ring "1.2.2"]]
   :plugins [[lein-cljsbuild "1.0.2"]
             [lein-ring "0.8.10"]]
-  :hooks [leiningen.cljsbuild]
+  :hooks []
   :source-paths ["src/clj"]
   :cljsbuild { 
     :builds {
