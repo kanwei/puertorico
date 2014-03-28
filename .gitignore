@@ -6,3 +6,4 @@ pom.xml
 /target/
 .lein-deps-sum
 resources/public/js/cljs.js
+resources/public/js/cljs

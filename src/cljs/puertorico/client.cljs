@@ -1,7 +1,12 @@
-(ns hello-clojurescript)
+(ns puertorico.client
+  (:require [reagent.core :as reagent :refer [atom]]))
 
-(defn handle-click []
-  (js/alert "Hello!"))
+(defn some-component []
+  [:div
+   [:h3 "I am a component!"]
+   [:p.someclass 
+    "I have " [:strong "bold"]
+    [:span {:style {:color "red"}} " and red"]
+    " text."]])
 
-(def clickable (.getElementById js/document "clickable"))
-(.addEventListener clickable "click" handle-click)
+(reagent/render-component [some-component] (.getElementById js/document "app"))

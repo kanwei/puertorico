@@ -3,7 +3,8 @@
   :url "https://github.com/kanwei/puertorico"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-2173"]
-                 [ring "1.2.2"]]
+                 [ring "1.2.2"]
+                 [reagent "0.4.2"]]
   :plugins [[lein-cljsbuild "1.0.2"]
             [lein-ring "0.8.10"]]
   :hooks []
@@ -13,7 +14,8 @@
       :main {
         :source-paths ["src/cljs"]
         :compiler {:output-to "resources/public/js/cljs.js"
-                   :optimizations :simple
+                   :output-dir "resources/public/js/cljs"
+                   :optimizations :none
                    :pretty-print true}
         :jar true}}}
   :main puertorico.server
