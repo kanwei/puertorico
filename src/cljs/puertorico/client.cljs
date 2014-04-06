@@ -41,7 +41,7 @@
 :coffee-maker {:cost 6
     :vp 3
     :workers 2
-    :resource :tobacco
+    :resource :coffee
     :count 3
     :column 3
 }
@@ -176,8 +176,8 @@
 
 (defn circles [n]
   (repeat n 
-  [:svg {:height 30 :width 30}
-   [:circle {:cx 15 :cy 15 :r 10 :stroke "black" :stroke-width 1 :fill "white"}]]))
+  [:svg {:height 20 :width 20}
+   [:circle {:cx 10 :cy 10 :r 7 :stroke "black" :stroke-width 1 :fill "white"}]]))
 
 (def common
   {:roles [:captain :trader :builder :settler :mayor :craftsman]
@@ -200,7 +200,7 @@
 
 (defn building-tile [b-name]
     (let [building (b-name @buildings)]
-      [:div.building
+      [:div.building {:class (:resource building)}
        [:h5 (name b-name)]
        [:i.fa.fa-money.pull-right (:cost building)]
        [:div (circles (:workers building))]
