@@ -31,6 +31,25 @@
       background-color: #ccc;
       border: 1px solid #aaa;
     }
+    .indigo {
+      background-color: #4B0082;
+      color: #aaa;
+    }
+    .sugar {
+      background-color: silver;
+    }
+    .corn {
+      background-color: yellow;
+    }
+    .coffee {
+      background-color: black;
+      color: white;
+    }
+    .tobacco {
+      background-color: brown;
+      color: white;
+    }
+
   </style>
   <link rel="stylesheet" href="css/bootstrap-theme.min.css">
   <link rel="stylesheet" href="css/main.css">
@@ -72,21 +91,22 @@
       <div id="app"></div>
 
       <div class="row">
-        <div class="well col-md-8">
+        <div class="well well-sm col-md-8">
           <table class="table">
             <thead>
               <tr>
-                <th>1 Quarry</th>
-                <th>2 Quarry</th>
-                <th>3 Quarry</th>
-                <th>4 Quarry</th>
+                <th>1 Quarry, 1 VP</th>
+                <th>2 Quarry, 2 VP</th>
+                <th>3 Quarry, 3 VP</th>
+                <th>4 Quarry, 4 VP</th>
               </tr>
             </thead>
             <tbody id="building-board">
             </tbody>
           </table>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-4" id="supply-board">
+          <div id="vpleft"></div>
           <div>
             <h2>Ships</h2>
             <div class="box"></div>
@@ -106,7 +126,7 @@
         </div>
       </div>
 
-      <div id="gameboards"></div>
+      <div id="player-boards"></div>
       <div id="buildings"></div>
 
 
