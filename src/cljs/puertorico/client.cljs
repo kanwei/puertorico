@@ -211,13 +211,18 @@
 
 (def game (atom (apply create-game ["Kanwei" "Lauren" "Ted"])))
 
-
 (defn randomize-fields []
   (->> (for [[field-type field-num] (:fields @game)]
         (repeat field-num field-type))
       flatten
       shuffle
-      (take (inc (:n-player @game)))))
+      (take (inc (:n-player @game)))
+      vec))
+
+(defn vec-remove
+  "remove elem in coll"
+  [coll pos]
+  (vec (concat (subvec coll 0 pos) (subvec coll (inc pos)))))
 
 (swap! game update-in [:available-fields] randomize-fields)
 
@@ -298,16 +303,33 @@
             [:div {:class (name field)} (name field)])
         ]])
 
+(defn current-role []
+  (let [last-role-event
+      (first (reverse 
+      (filter
+        (fn [event]
+          (contains? #{:rolestart :roleend} (first event)))
+        (:log @game))))]
+    (println last-role-event)
+    (if (= :rolestart (first last-role-event))
+      (second last-role-event))))
+
 (defn player-boards []
   [:div.row
    (for [player (:players @game)]
      [:div.col-md-3
         (player-board player)])])
 
-
 (defn active-player []
   (let [log (:log @game)]
     (pr-str log)))
+
+(defn get-field [field-type i]
+  (when (= :settler (current-role))
+    (swap! game update-in [:players 0 :fields] conj field-type)
+    (if (= field-type :quarry)
+      (swap! game update-in [:quarry] dec)
+      (swap! game update-in [:available-fields] vec-remove i))))
 
 (defn player-pick-role [role]
   (let [cstate @game
@@ -327,14 +349,22 @@
             (render-ship ship))
           [:h3 "Trader"] (render-trader (:trader current))
           [:h3 "Fields"]
-          (for [field (:available-fields current)]
-            [:div {:class (name field)} (name field)])
+          [:div.quarry {:on-click #(get-field :quarry nil)} (:quarry current) " Quarries"]
+          (map-indexed (fn [i field]
+                         [:div {:class (name field)
+                                :on-click #(get-field field i)} (name field)]
+                         )
+                       (:available-fields current))
+          #_(for [field (:available-fields current)]
+            [:div {:class (name field)
+                   :on-click #(get-field field)} (name field)])
           [:h3 "Roles"]
           (for [role (:roles current)]
             [:div.rolecard {:on-click #(player-pick-role role)}
              (name role)
              [:span " - " (role role-descriptions)]])
-          [:h3 "It is " (active-player) "'s turn"]]))
+          [:h3 "It is " (active-player) "'s turn"]
+          [:h3 "Current role: " (current-role)]]))
 
 (defn game-state []
   [:blockquote (pr-str @game)])
