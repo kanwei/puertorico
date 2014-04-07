@@ -336,7 +336,13 @@
              [:span " - " (role role-descriptions)]])
           [:h3 "It is " (active-player) "'s turn"]]))
 
+(defn game-state []
+  [:blockquote (pr-str @game)])
+
 (reagent/render-component [building-board] (.getElementById js/document "building-board"))
 (reagent/render-component [player-boards] (.getElementById js/document "player-boards"))
 (reagent/render-component [supply-board] (.getElementById js/document "supply-board"))
+(reagent/render-component [game-state] (.getElementById js/document "game-state"))
+
+
 
