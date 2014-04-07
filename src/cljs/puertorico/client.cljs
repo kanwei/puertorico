@@ -182,6 +182,7 @@
 (def common
   {:roles [:captain :trader :builder :settler :mayor :craftsman]
    :goods [:coffee 9 :tobacco 9 :corn 10 :sugar 11 :indigo 11]
+   :buildings initial-buildings
    :trader []
    :fields [:quarry 8 :coffee 8 :tobacco 9 :corn 10 :sugar 11 :indigo 12]})
 
@@ -196,10 +197,8 @@
 
 (def game (atom (apply create-game ["Kanwei" "Lauren" "Ted"])))
 
-(def buildings (atom initial-buildings))
-
 (defn building-tile [b-name]
-    (let [building (b-name @buildings)]
+    (let [building (b-name (:buildings @game))]
       [:div.building {:class (:resource building)}
        [:h5 (name b-name)]
        [:i.fa.fa-money.pull-right (:cost building)]
@@ -259,7 +258,7 @@
 (defn player-boards []
   [:div.row
    (for [player (:players @game)]
-     [:div.col-md-3 {:on-click #(swap! players dissoc player)}
+     [:div.col-md-3
         (player-board player)])])
 
 (defn supply-board []
