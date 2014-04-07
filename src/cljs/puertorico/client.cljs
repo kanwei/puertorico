@@ -269,7 +269,10 @@
           [:div "Colonists Left: " (:colonists current)]
           [:div "Colonist Ship: " (:colonist-ship current)]
           [:h3 "Ships"]
-          [:h3 "Trader"]]))
+          [:h3 "Trader"]
+          [:h3 "Roles"]
+          (for [role (:roles current)]
+            [:div.rolecard (name role)])]))
 
 (reagent/render-component [building-board] (.getElementById js/document "building-board"))
 (reagent/render-component [player-boards] (.getElementById js/document "player-boards"))
