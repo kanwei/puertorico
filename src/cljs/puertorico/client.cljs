@@ -1,5 +1,6 @@
 (ns puertorico.client
-  (:require [reagent.core :as reagent :refer [atom]]))
+  (:require [reagent.core :as reagent :refer [atom]]
+            [puertorico.util :as util]))
 
 (enable-console-print!)
 
@@ -201,6 +202,7 @@
    :buildings initial-buildings
    :trader []
    :governor 0
+   :turns '()
    :log []
    :quarry 8
    :fields {:coffee 8 :tobacco 9 :corn 10 :sugar 11 :indigo 12}})
@@ -225,12 +227,51 @@
        (take (inc (:n-player @game)))
        vec))
 
-(defn vec-remove
-  "remove elem in coll"
-  [coll pos]
-  (vec (concat (subvec coll 0 pos) (subvec coll (inc pos)))))
-
 (swap! game update-in [:available-fields] randomize-fields)
+
+
+;;;;;;;;;;;;;;;;;;;;;
+; GAME LOOP ACTIONS ;
+;;;;;;;;;;;;;;;;;;;;;
+
+(defn add-event-to-turn [turns event]
+  (let [current-turn (peek turns)]
+    (-> turns
+        pop
+        (conj (conj current-turn event)))))
+
+(defn add-to-turn [event]
+  (swap! game update-in [:turns] add-event-to-turn event))
+
+(defn do-settler [field-type i]
+  (when true
+    (swap! game update-in [:players 0 :fields] conj field-type)
+    (if (= field-type :quarry)
+      (swap! game update-in [:quarry] dec)
+      (swap! game update-in [:available-fields] util/vec-remove i))
+    (add-to-turn [field-type])))
+
+(defn time-to-pick-role? []
+  (let [current-turn (peek (:turns @game))]
+    (or (nil? current-turn)
+        (= :end (first current-turn)))))
+
+(defn player-pick-role [role]
+  (if (time-to-pick-role?)
+    (let [cstate @game
+          player-picked-role (:governor cstate)]
+      (swap! game update-in [:turns] conj [role player-picked-role])
+      (swap! game update-in [:log] conj [:rolestart role player-picked-role])
+      (swap! game update-in [:players player-picked-role] assoc :role role))))
+
+(defn whose-turn []
+  (let [current-turn (peek (:turns @game))
+        [role player-picked-role & actions] current-turn]
+    (if (empty? actions)
+      [player-picked-role :bonus])
+  ))
+
+
 
 (defn buy-building [b-name]
   (println "Trying to buy " b-name))
@@ -312,17 +353,6 @@
       [:div.field {:class (name field)} (name field)])
     ]])
 
-(defn current-role []
-  (let [last-role-event
-        (first
-         (filter
-          (fn [event]
-            (contains? #{:rolestart :roleend} (first event)))
-          (rseq (:log @game))))]
-    (println last-role-event)
-    (if (= :rolestart (first last-role-event))
-      (second last-role-event))))
-
 (defn player-boards []
   [:div.row
    (for [player (:players @game)]
@@ -334,24 +364,10 @@
    (for [event (:log @game)]
      [:div (pr-str event)])])
 
-(defn get-field [field-type i]
-  (when (= :settler (current-role))
-    (swap! game update-in [:players 0 :fields] conj field-type)
-    (if (= field-type :quarry)
-      (swap! game update-in [:quarry] dec)
-      (swap! game update-in [:available-fields] vec-remove i))))
-
-(defn player-pick-role [role]
-  (let [cstate @game
-        governor (:governor cstate)]
-    (swap! game update-in [:log] conj [:rolestart role (:governor @game)])
-    (swap! game update-in [:players governor] assoc :role role)
-    (swap! game update-in [:roles] disj role)))
-
-(defn roles-board []
+(defn render-roles []
   [:div
    (for [role (:roles @game)]
-     [:div.rolecard {:on-click #(player-pick-role role)}
+     [:button.btn.btn-default.rolecard {:on-click #(player-pick-role role)}
       (name role)
       [:span " - " (role role-descriptions)]])])
 
@@ -366,13 +382,15 @@
        (render-ship ship))
      [:h3 "Trader"] (render-trader (:trader current))
      [:h3 "Fields"]
-     [:div.quarry.field {:on-click #(get-field :quarry nil)} (:quarry current) " Q"]
+     [:div.quarry.field {:on-click #(do-settler :quarry nil)} (:quarry current) " Q"]
      (map-indexed (fn [i field]
                     [:div.field {:class (name field)
-                                 :on-click #(get-field field i)} (name field)]
+                                 :on-click #(do-settler field i)} (name field)]
                     )
                   (:available-fields current))
-     #_[:h3 "It is " (active-player) "'s turn"]
+     [:h3 "Current turn: " (pr-str (peek (:turns current)))]
+     [:h3 "Pick role? " (str (time-to-pick-role?))]
+     [:h3 "Whose turn? " (str (whose-turn))]
      #_[:h3 "Current role: " (current-role)]]))
 
 (defn game-state []
@@ -383,8 +401,5 @@
 (reagent/render-component [player-boards] (.getElementById js/document "player-boards"))
 (reagent/render-component [supply-board] (.getElementById js/document "supply-board"))
 (reagent/render-component [game-state] (.getElementById js/document "game-state"))
-(reagent/render-component [roles-board] (.getElementById js/document "roles-board"))
+(reagent/render-component [render-roles] (.getElementById js/document "roles-board"))
 (reagent/render-component [game-log] (.getElementById js/document "game-log"))
-
-
-
