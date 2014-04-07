@@ -309,19 +309,19 @@
             [:div (:name building)])
         [:h5 "Fields"]
         (for [field (:fields player)]
-            [:div {:class (name field)} (name field)])
+            [:div.field {:class (name field)} (name field)])
         ]])
 
 (defn current-role []
   (let [last-role-event
-      (first (reverse 
-      (filter
-        (fn [event]
-          (contains? #{:rolestart :roleend} (first event)))
-        (:log @game))))]
-    (println last-role-event)
-    (if (= :rolestart (first last-role-event))
-      (second last-role-event))))
+      (first 
+          (filter
+            (fn [event]
+              (contains? #{:rolestart :roleend} (first event)))
+            (rseq (:log @game))))]
+      (println last-role-event)
+      (if (= :rolestart (first last-role-event))
+          (second last-role-event))))
 
 (defn player-boards []
   [:div.row
@@ -329,9 +329,10 @@
      [:div.col-md-3
         (player-board player)])])
 
-(defn active-player []
-  (let [log (:log @game)]
-    (pr-str log)))
+(defn game-log []
+    [:div
+  (for [event (:log @game)]
+    [:div (pr-str event)])])
 
 (defn get-field [field-type i]
   (when (= :settler (current-role))
@@ -365,26 +366,25 @@
             (render-ship ship))
           [:h3 "Trader"] (render-trader (:trader current))
           [:h3 "Fields"]
-          [:div.quarry {:on-click #(get-field :quarry nil)} (:quarry current) " Quarries"]
+          [:div.quarry.field {:on-click #(get-field :quarry nil)} (:quarry current) " Q"]
           (map-indexed (fn [i field]
-                         [:div {:class (name field)
+                         [:div.field {:class (name field)
                                 :on-click #(get-field field i)} (name field)]
                          )
                        (:available-fields current))
-          #_(for [field (:available-fields current)]
-            [:div {:class (name field)
-                   :on-click #(get-field field)} (name field)])
           #_[:h3 "It is " (active-player) "'s turn"]
           #_[:h3 "Current role: " (current-role)]]))
 
 (defn game-state []
   [:blockquote (pr-str @game)])
 
+
 (reagent/render-component [building-board] (.getElementById js/document "building-board"))
 (reagent/render-component [player-boards] (.getElementById js/document "player-boards"))
 (reagent/render-component [supply-board] (.getElementById js/document "supply-board"))
 (reagent/render-component [game-state] (.getElementById js/document "game-state"))
 (reagent/render-component [roles-board] (.getElementById js/document "roles-board"))
+(reagent/render-component [game-log] (.getElementById js/document "game-log"))
 
 
 
