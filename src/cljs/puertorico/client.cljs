@@ -184,6 +184,9 @@
 (defn gold [text]
   [:span.gold text])
 
+(defn vp [text]
+  [:span.vp text])
+
 (def role-descriptions {:captain "Goods for VP"
                         :trader "Goods for money"
                         :builder "Buy buildings"
@@ -237,7 +240,10 @@
       [:div.building {:class [(:resource building)]
                       :on-click #(buy-building b-name)}
        [:h5.pull-left (name b-name)]
+       
        [:span.pull-right (gold (:cost building))]
+       [:span.pull-right (vp (:vp building))]
+       
        [:div.clearfix]
        [:div.pull-left (circles (:workers building))]
        [:div.building-count.pull-right (:count building) "x"]
@@ -296,7 +302,7 @@
       [:div.well
         [:div.pull-left (:name player)]
         [:span.pull-right (gold (:gold player))]
-        [:i.fa.fa-trophy.pull-right (:vp player)]
+        [:span.pull-right (vp (:vp player))]
         [:div.clearfix]
         [:h5 "Buildings"]
         (for [building (:buildings player)]
