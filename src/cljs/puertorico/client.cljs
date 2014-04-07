@@ -196,18 +196,30 @@
    :trader []
    :governor 0
    :log []
-   :fields [:quarry 8 :coffee 8 :tobacco 9 :corn 10 :sugar 11 :indigo 12]})
+   :quarry 8
+   :fields {:coffee 8 :tobacco 9 :corn 10 :sugar 11 :indigo 12}})
 
 (defn create-game 
   ([p1 p2 p3]
    (merge common 
-          {:vp 75 :colonists 55 :ships [4 5 6]
+          {:n-player 3
+           :vp 75 :colonists 55 :ships [4 5 6]
            :colonist-ship 3
            :players [(create-player p1 2 :indigo)
                      (create-player p2 2 :indigo)
                      (create-player p3 1 :corn)]})))
 
 (def game (atom (apply create-game ["Kanwei" "Lauren" "Ted"])))
+
+
+(defn randomize-fields []
+  (->> (for [[field-type field-num] (:fields @game)]
+        (repeat field-num field-type))
+      flatten
+      shuffle
+      (take (inc (:n-player @game)))))
+
+(swap! game update-in [:available-fields] randomize-fields)
 
 (defn buy-building [b-name]
   (println "Trying to buy " b-name))
@@ -314,6 +326,9 @@
           (for [ship (:ships current)]
             (render-ship ship))
           [:h3 "Trader"] (render-trader (:trader current))
+          [:h3 "Fields"]
+          (for [field (:available-fields current)]
+            [:div {:class (name field)} (name field)])
           [:h3 "Roles"]
           (for [role (:roles current)]
             [:div.rolecard {:on-click #(player-pick-role role)}
