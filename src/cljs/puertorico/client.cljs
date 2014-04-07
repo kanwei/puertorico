@@ -181,6 +181,9 @@
   [:svg {:height 20 :width 20}
    [:circle {:cx 10 :cy 10 :r 7 :stroke "black" :stroke-width 1 :fill "white"}]]))
 
+(defn gold [text]
+  [:span.gold text])
+
 (def role-descriptions {:captain "Goods for VP"
                         :trader "Goods for money"
                         :builder "Buy buildings"
@@ -231,10 +234,10 @@
 
 (defn building-tile [b-name]
     (let [building (b-name (:buildings @game))]
-      [:div.building {:class (:resource building)
+      [:div.building {:class [(:resource building)]
                       :on-click #(buy-building b-name)}
        [:h5.pull-left (name b-name)]
-       [:i.fa.fa-money.pull-right (:cost building)]
+       [:span.pull-right (gold (:cost building))]
        [:div.clearfix]
        [:div.pull-left (circles (:workers building))]
        [:div.building-count.pull-right (:count building) "x"]
@@ -292,7 +295,7 @@
      [:div.rolecard (name (:role player))])
       [:div.well
         [:div.pull-left (:name player)]
-        [:i.fa.fa-money.pull-right (:gold player)]
+        [:span.pull-right (gold (:gold player))]
         [:i.fa.fa-trophy.pull-right (:vp player)]
         [:div.clearfix]
         [:h5 "Buildings"]
