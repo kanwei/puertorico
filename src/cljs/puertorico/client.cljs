@@ -209,12 +209,19 @@
 
 (def game (atom (apply create-game ["Kanwei" "Lauren" "Ted"])))
 
+(defn buy-building [b-name]
+  (println "Trying to buy " b-name))
+
 (defn building-tile [b-name]
     (let [building (b-name (:buildings @game))]
-      [:div.building {:class (:resource building)}
-       [:h5 (name b-name)]
+      [:div.building {:class (:resource building)
+                      :on-click #(buy-building b-name)}
+       [:h5.pull-left (name b-name)]
        [:i.fa.fa-money.pull-right (:cost building)]
-       [:div (circles (:workers building))]
+       [:div.clearfix]
+       [:div.pull-left (circles (:workers building))]
+       [:div.building-count.pull-right (:count building) "x"]
+       [:div.clearfix]
        ]))
 
 (defn building-board []
@@ -266,7 +273,6 @@
   [:div
    (if (:role player)
      [:div.rolecard (name (:role player))])
-       
       [:div.well
         [:div.pull-left (:name player)]
         [:i.fa.fa-money.pull-right (:gold player)]
