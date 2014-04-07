@@ -181,10 +181,10 @@
   [:svg {:height 20 :width 20}
    [:circle {:cx 10 :cy 10 :r 7 :stroke "black" :stroke-width 1 :fill "white"}]]))
 
-(def role-descriptions {:captain "Ship goods for VP"
-                        :trader "Sell goods for money"
-                        :builder "Build buildings"
-                        :settler "Get quarry/plantation(s)"
+(def role-descriptions {:captain "Goods for VP"
+                        :trader "Goods for money"
+                        :builder "Buy buildings"
+                        :settler "Get quarry/field(s)"
                         :mayor "Get colonists"
                         :craftsman "Produce goods"})
                         
@@ -338,6 +338,13 @@
       (swap! game update-in [:players governor] assoc :role role)
       (swap! game update-in [:roles] disj role)))
 
+(defn roles-board []
+  [:div
+  (for [role (:roles @game)]
+            [:div.rolecard {:on-click #(player-pick-role role)}
+             (name role)
+             [:span " - " (role role-descriptions)]])])
+
 (defn supply-board []
     (let [current @game]
       [:div 
@@ -358,13 +365,8 @@
           #_(for [field (:available-fields current)]
             [:div {:class (name field)
                    :on-click #(get-field field)} (name field)])
-          [:h3 "Roles"]
-          (for [role (:roles current)]
-            [:div.rolecard {:on-click #(player-pick-role role)}
-             (name role)
-             [:span " - " (role role-descriptions)]])
-          [:h3 "It is " (active-player) "'s turn"]
-          [:h3 "Current role: " (current-role)]]))
+          #_[:h3 "It is " (active-player) "'s turn"]
+          #_[:h3 "Current role: " (current-role)]]))
 
 (defn game-state []
   [:blockquote (pr-str @game)])
@@ -373,6 +375,7 @@
 (reagent/render-component [player-boards] (.getElementById js/document "player-boards"))
 (reagent/render-component [supply-board] (.getElementById js/document "supply-board"))
 (reagent/render-component [game-state] (.getElementById js/document "game-state"))
+(reagent/render-component [roles-board] (.getElementById js/document "roles-board"))
 
 
 
