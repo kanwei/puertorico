@@ -1,6 +1,8 @@
 (ns puertorico.client
   (:require [reagent.core :as reagent :refer [atom]]))
 
+(enable-console-print!)
+
 (def initial-buildings
   {:small-indigo-maker {:cost 1
     :vp 1
@@ -179,11 +181,21 @@
   [:svg {:height 20 :width 20}
    [:circle {:cx 10 :cy 10 :r 7 :stroke "black" :stroke-width 1 :fill "white"}]]))
 
+(def role-descriptions {:captain "Ship goods for VP"
+                        :trader "Sell goods for money"
+                        :builder "Build buildings"
+                        :settler "Get quarry/plantation(s)"
+                        :mayor "Get colonists"
+                        :craftsman "Produce goods"})
+                        
+
 (def common
-  {:roles [:captain :trader :builder :settler :mayor :craftsman]
+  {:roles (set (keys role-descriptions))
    :goods [:coffee 9 :tobacco 9 :corn 10 :sugar 11 :indigo 11]
    :buildings initial-buildings
    :trader []
+   :governor 0
+   :log []
    :fields [:quarry 8 :coffee 8 :tobacco 9 :corn 10 :sugar 11 :indigo 12]})
 
 (defn create-game 
@@ -237,23 +249,36 @@
     [:td (building-tile :large-warehouse)]
     [:td (building-tile :wharf)]]])
 
-(defn ship [size]
-  [:div.box]
-  )
+(defn render-ship [size type]
+  [:div.ship
+    (repeat size [:div.box {:class type}])
+    [:div.clearfix]])
+
+(defn render-trader [trader]
+  [:div.ship
+    [:div.box {:class type}]
+    [:div.box {:class type}]
+    [:div.box {:class type}]
+    [:div.box {:class type}]
+    [:div.clearfix]])
 
 (defn player-board [player]
-  [:div.well
-    [:div.pull-left (:name player)]
-    [:i.fa.fa-money.pull-right (:gold player)]
-    [:i.fa.fa-trophy.pull-right (:vp player)]
-    [:div.clearfix]
-    [:h5 "Buildings"]
-    (for [building (:buildings player)]
-        [:div (:name building)])
-    [:h5 "Fields"]
-    (for [field (:fields player)]
-        [:div {:class (name field)} (name field)])
-    ])
+  [:div
+   (if (:role player)
+     [:div.rolecard (name (:role player))])
+       
+      [:div.well
+        [:div.pull-left (:name player)]
+        [:i.fa.fa-money.pull-right (:gold player)]
+        [:i.fa.fa-trophy.pull-right (:vp player)]
+        [:div.clearfix]
+        [:h5 "Buildings"]
+        (for [building (:buildings player)]
+            [:div (:name building)])
+        [:h5 "Fields"]
+        (for [field (:fields player)]
+            [:div {:class (name field)} (name field)])
+        ]])
 
 (defn player-boards []
   [:div.row
@@ -261,17 +286,34 @@
      [:div.col-md-3
         (player-board player)])])
 
+
+(defn active-player []
+  (let [log (:log @game)]
+    (pr-str log)))
+
+(defn player-pick-role [role]
+  (let [cstate @game
+        governor (:governor cstate)]
+      (swap! game update-in [:log] conj [:rolestart role (:governor @game)])
+      (swap! game update-in [:players governor] assoc :role role)
+      (swap! game update-in [:roles] disj role)))
+
 (defn supply-board []
     (let [current @game]
       [:div 
           [:i.fa.fa-trophy (:vp current)]
-          [:div "Colonists Left: " (:colonists current)]
+          [:div "Colonist Supply: " (:colonists current)]
           [:div "Colonist Ship: " (:colonist-ship current)]
           [:h3 "Ships"]
-          [:h3 "Trader"]
+          (for [ship (:ships current)]
+            (render-ship ship))
+          [:h3 "Trader"] (render-trader (:trader current))
           [:h3 "Roles"]
           (for [role (:roles current)]
-            [:div.rolecard (name role)])]))
+            [:div.rolecard {:on-click #(player-pick-role role)}
+             (name role)
+             [:span " - " (role role-descriptions)]])
+          [:h3 "It is " (active-player) "'s turn"]]))
 
 (reagent/render-component [building-board] (.getElementById js/document "building-board"))
 (reagent/render-component [player-boards] (.getElementById js/document "player-boards"))
