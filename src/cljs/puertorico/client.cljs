@@ -5,6 +5,7 @@
 
 (enable-console-print!)
 
+(def estream (atom []))
 
 (defn create-player [name gold starting-field]
   {:name name
@@ -29,13 +30,12 @@
                         :trader "Goods for money"
                         :builder "Buy buildings"
                         :settler "Get quarry/field(s)"
-                        :mayor "Get colonists"
+                        :mayor "Get workers"
                         :craftsman "Produce goods"})
 
 
 (def common-state
   {:roles (set (keys role-descriptions))
-   :goods [:coffee 9 :tobacco 9 :corn 10 :sugar 11 :indigo 11]
    :buildings common/initial-buildings
    :trader []
    :governor 0
@@ -44,19 +44,116 @@
    :quarry 8
    :fields {:coffee 8 :tobacco 9 :corn 10 :sugar 11 :indigo 12}})
 
+(defn bank-buildings []
+  (into {}
+        (for [[bname bdesc] common/initial-buildings]
+          [bname (select-keys bdesc [:count :column])])))
+
+(swap! estream conj
+       [:good :bank :coffee 9]
+       [:good :bank :tobacco 9]
+       [:good :bank :corn 10]
+       [:good :bank :sugar 11]
+       [:good :bank :indigo 11]
+       
+       [:field :bank :quarry 8]
+       [:field :bank :coffee 8]
+       [:field :bank :tobacco 9]
+       [:field :bank :corn 10]
+       [:field :bank :sugar 11]
+       [:field :bank :indigo 12]
+       
+       [:building :bank (bank-buildings)]
+       
+       )
+
+(defn next-player [current-picker cstate]
+  (mod (inc current-picker) (:nplayers cstate)))
+
+(defmulti transition identity)
+(defmethod transition :good [etype state [dest good-type amount]]
+  (update-in state [dest etype good-type] + amount))
+(defmethod transition :field [etype state [dest good-type amount]]
+  (update-in state [dest etype good-type] + amount))
+(defmethod transition :worker [etype state [dest amount]]
+  (update-in state [dest etype] + amount))
+(defmethod transition :vp [etype state [dest amount]]
+  (update-in state [dest etype] + amount))
+(defmethod transition :gold [etype state [dest amount]]
+  (update-in state [dest etype] + amount))
+(defmethod transition :building [etype state [dest buildings]]
+  (assoc-in state [dest] buildings))
+(defmethod transition :add-player [etype state [pname]]
+  (-> state
+      (update-in [:order] conj pname)
+      (update-in [:nplayers] inc)
+      (assoc-in [pname] {:name pname :worker 0 :gold 0 :vp 0 :field {} :building {}})))
+
+(defmethod transition :rolepick [etype state [role]]
+  (assoc state :current-role role))
+
+(defmethod transition :actiondone [etype state]
+  (update-in state [:action-picker] next-player state))
+
+(defmethod transition :default [etype state]
+  state)
+
+
+(defn calc-state []
+  (let [estream @estream]
+    (reduce 
+      (fn [acc [etype & eargs]]
+        (transition etype acc eargs))
+      {:order []
+       :nplayers 0
+       :governor 0
+       :role-picker 0
+       :current-role nil
+       :action-picker 0
+       :bank {:vp 0
+              :field-count 0
+              :building nil}}
+        estream)))
+
+(defn get-players [state]
+  (into {}
+        (remove (fn [[k v]] (keyword? k)) state)))
+
 (defn create-game
   ([p1 p2 p3]
+   (swap! estream conj
+          [:vp :bank 75]
+          [:worker :bank 55]
+          
+          [:worker :worker-ship 3]
+          [:worker :bank -3]
+          
+          [:ship 0 4]
+          [:ship 1 5]
+          [:ship 2 6]
+          
+          [:add-player p1]
+          [:gold p1 2]
+          [:field p1 :indigo 1]
+          
+          [:add-player p2]
+          [:gold p2 2]
+          [:field p2 :indigo 1]
+          
+          [:add-player p3]
+          [:gold p3 1]
+          [:field p3 :corn 1]
+          )
+   
    (merge common-state
           {:n-player 3
-           :vp 75 :colonists 55 :ships [4 5 6]
-           :colonist-ship 3
            :players [(create-player p1 2 :indigo)
                      (create-player p2 2 :indigo)
                      (create-player p3 1 :corn)]})))
 
 (def game (atom (apply create-game ["Kanwei" "Lauren" "Ted"])))
 
-(defn randomize-fields []
+(defn randomize-fields [state]
   (->> (for [[field-type field-num] (:fields @game)]
          (repeat field-num field-type))
        flatten
@@ -80,9 +177,15 @@
 (defn add-to-turn [event]
   (swap! game update-in [:turns] add-event-to-turn event))
 
-(defn do-mayor []
-  
+(defn do-mayor [cstate]
+  (swap! estream conj 
+         [:rolepick :mayor]
+         [:worker :bank -1]
+         [:worker (nth (:order cstate) (:role-picker cstate)) 1])
   )
+
+(defn action-done []
+  (swap! estream conj [:actiondone])) 
 
 (defn do-settler [field-type i]
   (when true
@@ -98,12 +201,10 @@
         (= :end (first current-turn)))))
 
 (defn player-pick-role [role]
-  (if (time-to-pick-role?)
-    (let [cstate @game
-          player-picked-role (:governor cstate)]
-      (swap! game update-in [:turns] conj [role player-picked-role])
-      (swap! game update-in [:log] conj [:rolestart role player-picked-role])
-      (swap! game update-in [:players player-picked-role] assoc :role role))))
+  (case role
+    :mayor (do-mayor (calc-state))
+    nil)
+  )
 
 (defn whose-turn []
   (let [current-turn (peek (:turns @game))
@@ -177,26 +278,28 @@
    [:div.box {:class type}]
    [:div.clearfix]])
 
-(defn player-board [player]
+(defn player-board [[pname player]]
   [:div
    (if (:role player)
      [:div.rolecard (name (:role player))])
    [:div.well
-    [:div.pull-left (:name player)]
+    [:div.pull-left pname]
     [:span.pull-right (gold (:gold player))]
     [:span.pull-right (vp (:vp player))]
     [:div.clearfix]
+    [:h5 "Workers: " (:worker player)]
     [:h5 "Buildings"]
-    (for [building (:buildings player)]
+    (for [building (:building player)]
       [:div (:name building)])
     [:h5 "Fields"]
-    (for [field (:fields player)]
-      [:div.field {:class (name field)} (name field)])
+    (for [[ftype fnum] (:field player)
+          i (range fnum)]
+      [:div.field {:class (name ftype)} (name ftype)])
     ]])
 
 (defn player-boards []
   [:div.row
-   (for [player (:players @game)]
+   (for [player (get-players (calc-state))]
      [:div.col-md-3
       (player-board player)])])
 
@@ -213,14 +316,15 @@
       [:span " - " (role role-descriptions)]])])
 
 (defn supply-board []
-  (let [current @game]
+  (let [current @game
+        cstate (calc-state)]
     [:div
-     [:i.fa.fa-trophy (:vp current)]
-     [:div "Colonist Supply: " (:colonists current)]
-     [:div "Colonist Ship: " (:colonist-ship current)]
+     [:i.fa.fa-trophy (get-in cstate [:bank :vp])]
+     [:div "Worker Supply: " (get-in cstate [:bank :worker])]
+     [:div "Worker Ship: " (get-in cstate [:worker-ship :worker])]
      [:h3 "Ships"]
      (for [ship (:ships current)]
-       (render-ship ship))
+       (render-ship ship nil))
      [:h3 "Trader"] (render-trader (:trader current))
      [:h3 "Fields"]
      [:div.quarry.field {:on-click #(do-settler :quarry nil)} (:quarry current) " Q"]
@@ -229,13 +333,17 @@
                                  :on-click #(do-settler field i)} (name field)]
                     )
                   (:available-fields current))
-     [:h3 "Current turn: " (pr-str (peek (:turns current)))]
-     [:h3 "Pick role? " (str (time-to-pick-role?))]
-     [:h3 "Whose turn? " (str (whose-turn))]
-     #_[:h3 "Current role: " (current-role)]]))
+     [:h3 "Governor: " (:governor cstate)]
+     [:h3 "Role picker: " (:role-picker cstate)]
+     [:h3 "Current role: " (str (:current-role cstate))]
+     [:h3 "Action picker: " (:action-picker cstate)]
+     [:button.btn.btn-success {:on-click action-done} "Done!"]
+     ]))
 
 (defn game-state []
-  [:blockquote (pr-str @game)])
+  [:div
+    [:blockquote (pr-str @estream)]
+    [:blockquote (pr-str (calc-state))]])
 
 
 (reagent/render-component [building-board] (.getElementById js/document "building-board"))
