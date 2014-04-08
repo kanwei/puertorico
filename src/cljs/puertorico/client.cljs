@@ -1,5 +1,6 @@
 (ns puertorico.client
   (:require [reagent.core :as reagent :refer [atom]]
+            [cljs.reader :as reader]
             [puertorico.util :as util]
             [puertorico.common :as common]))
 
@@ -7,9 +8,10 @@
 
 (def ws (js/WebSocket. "ws://localhost:3000/ws"))
 (aset ws "onmessage" (fn [msg]
-                       (println (.-data msg))))
+                       (println (reader/read-string (.-data msg)))))
 
 (def estream (atom []))
+(def state (atom {}))
 
 (defn circles [n]
   (repeat n
