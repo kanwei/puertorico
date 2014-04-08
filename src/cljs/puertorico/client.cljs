@@ -47,7 +47,7 @@
 (defn bank-buildings []
   (into {}
         (for [[bname bdesc] common/initial-buildings]
-          [bname (select-keys bdesc [:count :column])])))
+          [bname (select-keys bdesc [:count :cost :column])])))
 
 (swap! estream conj
        [:good :bank :coffee 9]
@@ -82,7 +82,7 @@
 (defmethod transition :gold [etype state [dest amount]]
   (update-in state [dest etype] + amount))
 (defmethod transition :building [etype state [dest buildings]]
-  (assoc-in state [dest] buildings))
+  (assoc-in state [dest :building] buildings))
 (defmethod transition :add-player [etype state [pname]]
   (-> state
       (update-in [:order] conj pname)
@@ -90,7 +90,9 @@
       (assoc-in [pname] {:name pname :worker 0 :gold 0 :vp 0 :field {} :building {}})))
 
 (defmethod transition :rolepick [etype state [role]]
-  (assoc state :current-role role))
+  (-> state
+      (assoc-in [((:order state) (:role-picker state)) :role] role) 
+      (assoc :current-role role)))
 
 (defmethod transition :actiondone [etype state]
   (update-in state [:action-picker] next-player state))
@@ -177,17 +179,12 @@
 (defn add-to-turn [event]
   (swap! game update-in [:turns] add-event-to-turn event))
 
-(defn do-mayor [cstate]
-  (swap! estream conj 
-         [:rolepick :mayor]
-         [:worker :bank -1]
-         [:worker (nth (:order cstate) (:role-picker cstate)) 1])
-  )
+
 
 (defn action-done []
   (swap! estream conj [:actiondone])) 
 
-(defn do-settler [field-type i]
+(defn do-settler-action [field-type i]
   (when true
     (swap! game update-in [:players 0 :fields] conj field-type)
     (if (= field-type :quarry)
@@ -200,11 +197,19 @@
     (or (nil? current-turn)
         (= :end (first current-turn)))))
 
-(defn player-pick-role [role]
-  (case role
-    :mayor (do-mayor (calc-state))
-    nil)
-  )
+(defmulti player-pick-role identity)
+(defmethod player-pick-role :mayor [role cstate]
+  (swap! estream conj 
+         [:rolepick :mayor]
+         [:worker :bank -1]
+         [:worker (nth (:order cstate) (:role-picker cstate)) 1]))
+
+(defmethod player-pick-role :builder [role cstate]
+  (swap! estream conj 
+    [:rolepick :builder]))
+
+(defmethod player-pick-role :default [role cstate]
+  nil)
 
 (defn whose-turn []
   (let [current-turn (peek (:turns @game))
@@ -213,15 +218,30 @@
       [player-picked-role :bonus])
   ))
 
+(defn num-quarries [pname cstate]
+  0)
 
-
-(defn buy-building [b-name]
-  (println "Trying to buy " b-name))
+(defn buy-building [b-name cstate]
+  (println "Trying to buy " b-name)
+  (let [apicker (:action-picker cstate)
+        building (get-in cstate [:bank :building b-name])
+        discount (max (:column building) (num-quarries (:action-picker cstate)))
+        cost (:cost building)
+        cost (if (= apicker (:role-picker cstate))
+               (dec cost)
+               cost)
+        cost (max 0 (- cost discount))
+        ]
+    (swap! estream conj
+           [:buy-building b-name apicker]
+           [:gold ((:order cstate) apicker) (- cost)]
+           )
+  ))
 
 (defn building-tile [b-name]
   (let [building (b-name (:buildings @game))]
     [:div.building {:class [(:resource building)]
-                    :on-click #(buy-building b-name)}
+                    :on-click #(buy-building b-name (calc-state))}
      [:h5.pull-left (name b-name)]
 
      [:span.pull-right (gold (:cost building))]
@@ -311,7 +331,7 @@
 (defn render-roles []
   [:div
    (for [role (:roles @game)]
-     [:button.btn.btn-default.rolecard {:on-click #(player-pick-role role)}
+     [:button.btn.btn-default.rolecard {:on-click #(player-pick-role role (calc-state))}
       (name role)
       [:span " - " (role role-descriptions)]])])
 
