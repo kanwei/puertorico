@@ -15,7 +15,7 @@
 (defn bank-buildings []
   (into {}
         (for [[bname bdesc] common/initial-buildings]
-          [bname (select-keys bdesc [:count :cost :column])])))
+          [bname (select-keys bdesc [:resource :count :vp :gold :column])])))
 
 (swap! estream conj
        [:good :bank :coffee 9]

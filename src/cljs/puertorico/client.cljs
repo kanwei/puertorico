@@ -38,7 +38,7 @@
 (defn bank-buildings []
   (into {}
         (for [[bname bdesc] common/initial-buildings]
-          [bname (select-keys bdesc [:count :cost :column])])))
+          [bname (select-keys bdesc [:vp :count :cost :column])])))
 
 (swap! estream conj
        [:good :bank :coffee 9]
@@ -214,7 +214,7 @@
   (let [apicker (:action-picker sstate)
         building (get-in sstate [:bank :building b-name])
         discount (max (:column building) (num-quarries (:action-picker sstate)))
-        cost (:cost building)
+        cost (:gold building)
         cost (if (= apicker (:role-picker sstate))
                (dec cost)
                cost)
@@ -227,12 +227,12 @@
   ))
 
 (defn building-tile [b-name]
-  (let [building (b-name (:buildings @game))]
+  (let [building (get-in @sstate [:bank :building b-name])]
     [:div.building {:class [(:resource building)]
                     :on-click #(buy-building b-name (calc-state))}
      [:h5.pull-left (name b-name)]
 
-     [:span.pull-right (gold (:cost building))]
+     [:span.pull-right (gold (:gold building))]
      [:span.pull-right (vp (:vp building))]
 
      [:div.clearfix]
@@ -305,9 +305,9 @@
       [:div.field {:class (name ftype)} (name ftype)])
     ]])
 
-(defn player-boards []
+(defn player-boards [sstate]
   [:div.row
-   (for [player (get-players (calc-state))]
+   (for [player (get-players sstate)]
      [:div.col-md-3
       (player-board player)])])
 
@@ -316,10 +316,10 @@
    (for [event (:log @game)]
      [:div (pr-str event)])])
 
-(defn render-roles []
+(defn render-roles [sstate]
   [:div
    (for [role (:roles @game)]
-     [:button.btn.btn-default.rolecard {:on-click #(player-pick-role role (calc-state))}
+     [:button.btn.btn-default.rolecard {:on-click #(player-pick-role role sstate)}
       (name role)
       [:span " - " (role common/role-descriptions)]])])
 
@@ -348,8 +348,7 @@
 
 (defn game-state []
   [:div
-    [:blockquote (pr-str @estream)]
-    [:blockquote (pr-str (calc-state))]])
+    [:blockquote (pr-str @sstate)]])
 
 (defn game-board []
   (let [sstate @sstate]
