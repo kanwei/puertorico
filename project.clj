@@ -4,7 +4,9 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-2202"]
                  [ring "1.2.2"]
-                 [reagent "0.4.2"]]
+                 [compojure "1.1.6"]
+                 [reagent "0.4.2"]
+                 [http-kit "2.1.18"]]
   :plugins [[lein-cljsbuild "1.0.3"]
             [lein-ring "0.8.10"]]
   :hooks []
@@ -18,6 +20,4 @@
                    :optimizations :none
                    :pretty-print true}
         :jar true}}}
-  :main puertorico.server
-  :ring {:handler puertorico.server/app})
-
+  :main puertorico.server)

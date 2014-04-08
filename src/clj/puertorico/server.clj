@@ -1,7 +1,8 @@
 (ns puertorico.server
   (:require [ring.adapter.jetty :as jetty]
             [ring.middleware.resource :as resources]
-            [ring.util.response :as response])
+            [ring.util.response :as response]
+            [org.httpkit.server :refer :all])
   (:gen-class))
 
 (defn render-app []
@@ -29,5 +30,5 @@
     (resources/wrap-resource "public")))
 
 (defn -main [& args]
-  (jetty/run-jetty app {:port 3000}))
+  (run-server app {:port 3000}))
 
