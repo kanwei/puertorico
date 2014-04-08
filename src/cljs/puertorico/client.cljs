@@ -6,12 +6,13 @@
 
 (enable-console-print!)
 
+(def estream (atom []))
+(def sstate (atom {}))
+
 (def ws (js/WebSocket. "ws://localhost:3000/ws"))
 (aset ws "onmessage" (fn [msg]
-                       (println (reader/read-string (.-data msg)))))
+                       (reset! sstate (reader/read-string (.-data msg)))))
 
-(def estream (atom []))
-(def state (atom {}))
 
 (defn circles [n]
   (repeat n
@@ -324,7 +325,7 @@
 
 (defn supply-board []
   (let [current @game
-        cstate (calc-state)]
+        cstate @sstate]
     [:div
      [:i.fa.fa-trophy (get-in cstate [:bank :vp])]
      [:div "Worker Supply: " (get-in cstate [:bank :worker])]
