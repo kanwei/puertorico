@@ -5,15 +5,11 @@
 
 (enable-console-print!)
 
-(def estream (atom []))
+(def ws (js/WebSocket. "ws://localhost:3000/ws"))
+(aset ws "onmessage" (fn [msg]
+                       (println (.-data msg))))
 
-(defn create-player [name gold starting-field]
-  {:name name
-   :gold gold
-   :vp 0
-   :fields [starting-field]
-   :buildings []
-   })
+(def estream (atom []))
 
 (defn circles [n]
   (repeat n
@@ -26,16 +22,8 @@
 (defn vp [text]
   [:span.vp text])
 
-(def role-descriptions {:captain "Goods for VP"
-                        :trader "Goods for money"
-                        :builder "Buy buildings"
-                        :settler "Get quarry/field(s)"
-                        :mayor "Get workers"
-                        :craftsman "Produce goods"})
-
-
 (def common-state
-  {:roles (set (keys role-descriptions))
+  {:roles (set (keys common/role-descriptions))
    :buildings common/initial-buildings
    :trader []
    :governor 0
@@ -148,10 +136,7 @@
           )
    
    (merge common-state
-          {:n-player 3
-           :players [(create-player p1 2 :indigo)
-                     (create-player p2 2 :indigo)
-                     (create-player p3 1 :corn)]})))
+          {})))
 
 (def game (atom (apply create-game ["Kanwei" "Lauren" "Ted"])))
 
@@ -333,7 +318,7 @@
    (for [role (:roles @game)]
      [:button.btn.btn-default.rolecard {:on-click #(player-pick-role role (calc-state))}
       (name role)
-      [:span " - " (role role-descriptions)]])])
+      [:span " - " (role common/role-descriptions)]])])
 
 (defn supply-board []
   (let [current @game

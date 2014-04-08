@@ -10,11 +10,12 @@
   :plugins [[lein-cljsbuild "1.0.3"]
             [lein-ring "0.8.10"]]
   :hooks []
-  :source-paths ["src/clj"]
+  :source-paths ["src/clj" "src/common"]
+  
   :cljsbuild { 
     :builds {
       :main {
-        :source-paths ["src/cljs"]
+        :source-paths ["src/cljs" "src/common"]
         :compiler {:output-to "resources/public/js/cljs.js"
                    :output-dir "resources/public/js/cljs"
                    :optimizations :none

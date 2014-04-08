@@ -1,5 +1,14 @@
 (ns puertorico.common)
 
+
+(def role-descriptions {:captain "Goods for VP"
+                        :trader "Goods for money"
+                        :builder "Buy buildings"
+                        :settler "Get quarry/field(s)"
+                        :mayor "Get workers"
+                        :craftsman "Produce goods"})
+
+
 (def initial-buildings
   {:small-indigo-maker {:cost 1
                         :vp 1
