@@ -58,8 +58,8 @@
        
        )
 
-(defn next-player [current-picker cstate]
-  (mod (inc current-picker) (:nplayers cstate)))
+(defn next-player [current-picker sstate]
+  (mod (inc current-picker) (:nplayers sstate)))
 
 (defmulti transition identity)
 (defmethod transition :good [etype state [dest good-type amount]]
@@ -186,17 +186,17 @@
         (= :end (first current-turn)))))
 
 (defmulti player-pick-role identity)
-(defmethod player-pick-role :mayor [role cstate]
+(defmethod player-pick-role :mayor [role sstate]
   (swap! estream conj 
          [:rolepick :mayor]
          [:worker :bank -1]
-         [:worker (nth (:order cstate) (:role-picker cstate)) 1]))
+         [:worker (nth (:order sstate) (:role-picker sstate)) 1]))
 
-(defmethod player-pick-role :builder [role cstate]
+(defmethod player-pick-role :builder [role sstate]
   (swap! estream conj 
     [:rolepick :builder]))
 
-(defmethod player-pick-role :default [role cstate]
+(defmethod player-pick-role :default [role sstate]
   nil)
 
 (defn whose-turn []
@@ -206,23 +206,23 @@
       [player-picked-role :bonus])
   ))
 
-(defn num-quarries [pname cstate]
+(defn num-quarries [pname sstate]
   0)
 
-(defn buy-building [b-name cstate]
+(defn buy-building [b-name sstate]
   (println "Trying to buy " b-name)
-  (let [apicker (:action-picker cstate)
-        building (get-in cstate [:bank :building b-name])
-        discount (max (:column building) (num-quarries (:action-picker cstate)))
+  (let [apicker (:action-picker sstate)
+        building (get-in sstate [:bank :building b-name])
+        discount (max (:column building) (num-quarries (:action-picker sstate)))
         cost (:cost building)
-        cost (if (= apicker (:role-picker cstate))
+        cost (if (= apicker (:role-picker sstate))
                (dec cost)
                cost)
         cost (max 0 (- cost discount))
         ]
     (swap! estream conj
            [:buy-building b-name apicker]
-           [:gold ((:order cstate) apicker) (- cost)]
+           [:gold ((:order sstate) apicker) (- cost)]
            )
   ))
 
@@ -242,7 +242,7 @@
      ]))
 
 (defn building-board []
-  [:table
+  [:tbody
    [:tr
     [:td (building-tile :small-indigo-maker)]
     [:td (building-tile :large-indigo-maker)]
@@ -323,40 +323,53 @@
       (name role)
       [:span " - " (role common/role-descriptions)]])])
 
-(defn supply-board []
-  (let [current @game
-        cstate @sstate]
-    [:div
-     [:i.fa.fa-trophy (get-in cstate [:bank :vp])]
-     [:div "Worker Supply: " (get-in cstate [:bank :worker])]
-     [:div "Worker Ship: " (get-in cstate [:worker-ship :worker])]
-     [:h3 "Ships"]
-     (for [ship (:ships current)]
-       (render-ship ship nil))
-     [:h3 "Trader"] (render-trader (:trader current))
-     [:h3 "Fields"]
-     [:div.quarry.field {:on-click #(do-settler :quarry nil)} (:quarry current) " Q"]
-     (map-indexed (fn [i field]
-                    [:div.field {:class (name field)
-                                 :on-click #(do-settler field i)} (name field)]
-                    )
-                  (:available-fields current))
-     [:h3 "Governor: " (:governor cstate)]
-     [:h3 "Role picker: " (:role-picker cstate)]
-     [:h3 "Current role: " (str (:current-role cstate))]
-     [:h3 "Action picker: " (:action-picker cstate)]
-     [:button.btn.btn-success {:on-click action-done} "Done!"]
-     ]))
+(defn supply-board [sstate]
+  [:div
+   [:i.fa.fa-trophy (get-in sstate [:bank :vp])]
+   [:div "Worker Supply: " (get-in sstate [:bank :worker])]
+   [:div "Worker Ship: " (get-in sstate [:worker-ship :worker])]
+   [:h3 "Ships"]
+   (for [ship (:ships current)]
+     (render-ship ship nil))
+   [:h3 "Trader"] (render-trader (:trader current))
+   [:h3 "Fields"]
+   [:div.quarry.field {:on-click #(do-settler :quarry nil)} (:quarry current) " Q"]
+   (map-indexed (fn [i field]
+                  [:div.field {:class (name field)
+                               :on-click #(do-settler field i)} (name field)]
+                  )
+                (:available-fields current))
+   [:h3 "Governor: " (:governor sstate)]
+   [:h3 "Role picker: " (:role-picker sstate)]
+   [:h3 "Current role: " (str (:current-role sstate))]
+   [:h3 "Action picker: " (:action-picker sstate)]
+   [:button.btn.btn-success {:on-click action-done} "Done!"]
+   ])
 
 (defn game-state []
   [:div
     [:blockquote (pr-str @estream)]
     [:blockquote (pr-str (calc-state))]])
 
-
-(reagent/render-component [building-board] (.getElementById js/document "building-board"))
-(reagent/render-component [player-boards] (.getElementById js/document "player-boards"))
-(reagent/render-component [supply-board] (.getElementById js/document "supply-board"))
-(reagent/render-component [game-state] (.getElementById js/document "game-state"))
-(reagent/render-component [render-roles] (.getElementById js/document "roles-board"))
-(reagent/render-component [game-log] (.getElementById js/document "game-log"))
+(defn game-board []
+  (let [sstate @sstate]
+    [:div
+      [:div.row
+       [:div.well.well-sm.col-md-8
+        [:table.table
+         [:thead
+          [:tr (for [i (range 1 5)] [:th i " Quarry"])]]
+         (building-board sstate)]]
+       
+       [:div.col-md-4 (supply-board sstate)]]
+      [:div (render-roles sstate)]
+      [:div.clearfix]
+      
+      (player-boards sstate)
+      
+      (game-log)
+      (game-state)
+      
+      ]))
+   
+(reagent/render-component [game-board] (.getElementById js/document "app"))
