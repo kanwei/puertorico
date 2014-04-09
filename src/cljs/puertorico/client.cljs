@@ -6,8 +6,8 @@
 
 (enable-console-print!)
 
-(def estream (atom []))
 (def sstate (atom {}))
+(def acting-player (atom nil))
 
 (def ws (js/WebSocket. (str "ws://" (.-host js/location) "/ws")))
 
@@ -63,11 +63,6 @@
         (= :end (first current-turn)))))
 
 (defmulti player-pick-role identity)
-(defmethod player-pick-role :mayor [role sstate]
-  (swap! estream conj 
-         [:rolepick :mayor]
-         [:worker :bank -1]
-         [:worker (nth (:order sstate) (:role-picker sstate)) 1]))
 
 (defmethod player-pick-role :builder [role sstate]
   (send-message [:rolepick :builder]))
@@ -80,26 +75,6 @@
         [role player-picked-role & actions] current-turn]
     (if (empty? actions)
       [player-picked-role :bonus])
-  ))
-
-(defn num-quarries [pname sstate]
-  0)
-
-(defn buy-building [b-name sstate]
-  (println "Trying to buy " b-name)
-  (let [apicker (:action-picker sstate)
-        building (get-in sstate [:bank :building b-name])
-        discount (max (:column building) (num-quarries (:action-picker sstate)))
-        cost (:gold building)
-        cost (if (= apicker (:role-picker sstate))
-               (dec cost)
-               cost)
-        cost (max 0 (- cost discount))
-        ]
-    (swap! estream conj
-           [:buy-building b-name apicker]
-           [:gold ((:order sstate) apicker) (- cost)]
-           )
   ))
 
 (defn building-tile [b-name]
@@ -162,7 +137,7 @@
    [:div.box {:class type}]
    [:div.clearfix]])
 
-(defn player-board [[pname player]]
+(defn player-board [pname player]
   [:div
    (if (:role player)
      [:div.rolecard (name (:role player))])
@@ -183,14 +158,20 @@
 
 (defn player-boards [sstate]
   [:div.row
-   (for [player (get-players sstate)]
-     [:div.col-md-3
-      (player-board player)])])
+   [:h2 "Acting as player: " @acting-player]
+   (for [[pname player] (get-players sstate)]
+     [:div.col-md-4 {:on-click #(reset! acting-player pname)}
+      (player-board pname player)])])
+
+(defn disable-role? [role]
+  (if (or (:activerole @sstate) (not= @acting-player (:rolepicker @sstate)))
+    "disabled"))
 
 (defn render-roles [sstate]
   [:div
    (for [role (keys common/role-descriptions)]
-     [:button.btn.btn-default.rolecard {:on-click #(player-pick-role role sstate)}
+     [:button.btn.btn-default.rolecard {:class (disable-role? role)
+                                        :on-click #(player-pick-role role sstate)}
       (name role)
       [:span " - " (role common/role-descriptions)]])])
 
@@ -212,9 +193,9 @@
                   )
                 (:available-fields current))
    [:h3 "Governor: " (:governor sstate)]
-   [:h3 "Role picker: " (:role-picker sstate)]
-   [:h3 "Current role: " (str (:current-role sstate))]
-   [:h3 "Action picker: " (:action-picker sstate)]
+   [:h3 "Role picker: " (:rolepicker sstate)]
+   [:h3 "Current role: " (str (:active sstate))]
+   [:h3 "Action picker: " (:actionpicker sstate)]
    [:button.btn.btn-success {:on-click action-done} "Pass"]
    ])
 

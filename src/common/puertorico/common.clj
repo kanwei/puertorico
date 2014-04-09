@@ -3,10 +3,11 @@
 
 (def role-descriptions {:captain "Goods for VP"
                         :trader "Goods for money"
-                        :builder "Buy buildings"
-                        :settler "Get quarry/field(s)"
+                        :builder "Construct"
+                        :settler "Get q/field"
                         :mayor "Get workers"
-                        :craftsman "Produce goods"})
+                        :craftsman "Produce goods"
+                        :prospector "$"})
 
 
 (def initial-buildings

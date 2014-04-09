@@ -23,6 +23,9 @@
 
 (defmulti transition (fn [x & _] x))
 
+(defmethod transition :initialize [etype state [k v]]
+  (assoc state k v))
+
 (defmethod transition :good [etype state [dest good-type amount]]
   (update-in state [dest etype good-type] (fnil + 0) amount))
 
@@ -66,9 +69,7 @@
       {:order []
        :nplayers 0
        :governor 0
-       :role-picker 0
-       :current-role nil
-       :action-picker 0
+       :activerole nil
        :bank {:vp 0
               :field-count 0
               :building nil}}
@@ -94,6 +95,8 @@
           [:add-player p1]
           [:gold p1 2]
           [:field p1 :indigo 1]
+          
+          [:initialize :rolepicker p1]
           
           [:add-player p2]
           [:gold p2 2]
@@ -126,6 +129,29 @@
   (apply create-game ["Kanwei" "Lauren" "Ted"]))
 
 (reset-game)
+
+(defn do-mayor []
+  (swap! estream conj 
+         [:rolepick :mayor]
+         [:worker :bank -1]
+         #_[:worker (nth (:order sstate) (:role-picker sstate)) 1]))
+
+#_(defn buy-building [b-name sstate]
+  (println "Trying to buy " b-name)
+  (let [apicker (:action-picker sstate)
+        building (get-in sstate [:bank :building b-name])
+        discount (max (:column building) (num-quarries (:action-picker sstate)))
+        cost (:gold building)
+        cost (if (= apicker (:role-picker sstate))
+               (dec cost)
+               cost)
+        cost (max 0 (- cost discount))
+        ]
+    (swap! estream conj
+           [:buy-building b-name apicker]
+           [:gold ((:order sstate) apicker) (- cost)]
+           )
+  ))
 
 (def connections (atom #{}))
 
