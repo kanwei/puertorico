@@ -196,6 +196,7 @@
 
 (defn supply-board [sstate]
   [:div
+   [:button.btn.btn-danger {:on-click #(send-message :reset)} "RESET"]
    [:i.fa.fa-trophy (get-in sstate [:bank :vp])]
    [:div "Worker Supply: " (get-in sstate [:bank :worker])]
    [:div "Worker Ship: " (get-in sstate [:worker-ship :worker])]
@@ -214,7 +215,7 @@
    [:h3 "Role picker: " (:role-picker sstate)]
    [:h3 "Current role: " (str (:current-role sstate))]
    [:h3 "Action picker: " (:action-picker sstate)]
-   [:button.btn.btn-success {:on-click action-done} "Done!"]
+   [:button.btn.btn-success {:on-click action-done} "Pass"]
    ])
 
 (defn game-state []

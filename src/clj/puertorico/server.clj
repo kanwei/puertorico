@@ -18,24 +18,6 @@
         (for [[bname bdesc] common/initial-buildings]
           [bname (select-keys bdesc [:resource :count :vp :gold :column])])))
 
-(swap! estream conj
-       [:good :bank :coffee 9]
-       [:good :bank :tobacco 9]
-       [:good :bank :corn 10]
-       [:good :bank :sugar 11]
-       [:good :bank :indigo 11]
-       
-       [:field :bank :quarry 8]
-       [:field :bank :coffee 8]
-       [:field :bank :tobacco 9]
-       [:field :bank :corn 10]
-       [:field :bank :sugar 11]
-       [:field :bank :indigo 12]
-       
-       [:building :bank (bank-buildings)]
-       
-       )
-
 (defn next-player [current-picker cstate]
   (mod (inc current-picker) (:nplayers cstate)))
 
@@ -122,7 +104,28 @@
           [:field p3 :corn 1]
           )))
 
-(atom (apply create-game ["Kanwei" "Lauren" "Ted"]))
+(defn reset-game []
+  (reset! estream [])
+  (swap! estream conj
+       [:good :bank :coffee 9]
+       [:good :bank :tobacco 9]
+       [:good :bank :corn 10]
+       [:good :bank :sugar 11]
+       [:good :bank :indigo 11]
+       
+       [:field :bank :quarry 8]
+       [:field :bank :coffee 8]
+       [:field :bank :tobacco 9]
+       [:field :bank :corn 10]
+       [:field :bank :sugar 11]
+       [:field :bank :indigo 12]
+       
+       [:building :bank (bank-buildings)]
+       
+       )
+  (apply create-game ["Kanwei" "Lauren" "Ted"]))
+
+(reset-game)
 
 (def connections (atom #{}))
 
@@ -137,9 +140,12 @@
     (send! channel (pr-str (calc-state)))
     
     (on-receive channel (fn [data]
-                          (swap! estream conj (edn/read-string data))
-                          (doseq [chan @connections]
-                            (send! chan (pr-str (calc-state)))))))) ; data is sent directly to the client
+                          (let [parsed (edn/read-string data)]
+                            (if (= :reset parsed)
+                              (reset-game)
+                              (swap! estream conj parsed))
+                            (doseq [chan @connections]
+                              (send! chan (pr-str (calc-state)))))))))
 
 (defroutes pr-routes
   (GET "/ws" [] ws-handler))
