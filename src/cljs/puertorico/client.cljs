@@ -77,52 +77,59 @@
       [player-picked-role :bonus])
   ))
 
-(defn building-tile [b-name]
-  (let [building (get-in @sstate [:bank :building b-name])]
-    [:div.building {:class [(:resource building)]
-                    :on-click #(buy-building b-name (calc-state))}
-     [:h5.pull-left (name b-name)]
+(defn buy-button [b-name sstate acting-player]
+  (if (and (= :builder (:activerole sstate)) 
+           (= (:actionpicker sstate) acting-player)
+           (>= (common/money-after-building sstate acting-player b-name) 0))
+    [:button.btn.btn-success.btn-xs {:on-click #(send-message [:buy-building acting-player b-name])} "Buy"]))
+
+(defn building-tile [sstate b-name]
+  (let [building (get-in sstate [:bank :building b-name])]
+    [:div.building {:class [(:resource building)]}
+     [:h5.pull-left (name b-name)
+      (buy-button b-name sstate @acting-player)]
 
      [:span.pull-right (gold (:gold building))]
      [:span.pull-right (vp (:vp building))]
 
      [:div.clearfix]
-     [:div.pull-left (circles (:workers building))]
+     [:div.pull-left (circles (:worker building))]
      [:div.building-count.pull-right (:count building) "x"]
+     
      [:div.clearfix]
      ]))
 
-(defn building-board []
+(defn building-board [sstate]
   [:tbody
    [:tr
-    [:td (building-tile :small-indigo-maker)]
-    [:td (building-tile :large-indigo-maker)]
-    [:td (building-tile :tobacco-maker)]
-    [:td (building-tile :guild-hall)]]
+    [:td (building-tile sstate :small-indigo-maker)]
+    [:td (building-tile sstate :large-indigo-maker)]
+    [:td (building-tile sstate :tobacco-maker)]
+    [:td (building-tile sstate :guild-hall)]]
    [:tr
-    [:td (building-tile :small-sugar-maker)]
-    [:td (building-tile :large-sugar-maker)]
-    [:td (building-tile :coffee-maker)]
-    [:td (building-tile :residence)]]
+    [:td (building-tile sstate :small-sugar-maker)]
+    [:td (building-tile sstate :large-sugar-maker)]
+    [:td (building-tile sstate :coffee-maker)]
+    [:td (building-tile sstate :residence)]]
    [:tr
-    [:td (building-tile :small-market)]
-    [:td (building-tile :hospice)]
-    [:td (building-tile :factory)]
-    [:td (building-tile :fortress)]]
+    [:td (building-tile sstate :small-market)]
+    [:td (building-tile sstate :hospice)]
+    [:td (building-tile sstate :factory)]
+    [:td (building-tile sstate :fortress)]]
    [:tr
-    [:td (building-tile :hacienda)]
-    [:td (building-tile :office)]
-    [:td (building-tile :university)]
-    [:td (building-tile :customs-house)]]
+    [:td (building-tile sstate :hacienda)]
+    [:td (building-tile sstate :office)]
+    [:td (building-tile sstate :university)]
+    [:td (building-tile sstate :customs-house)]]
    [:tr
-    [:td (building-tile :construction-hut)]
-    [:td (building-tile :large-market)]
-    [:td (building-tile :harbor)]
-    [:td (building-tile :city-hall)]]
+    [:td (building-tile sstate :construction-hut)]
+    [:td (building-tile sstate :large-market)]
+    [:td (building-tile sstate :harbor)]
+    [:td (building-tile sstate :city-hall)]]
    [:tr
-    [:td (building-tile :small-warehouse)]
-    [:td (building-tile :large-warehouse)]
-    [:td (building-tile :wharf)]]])
+    [:td (building-tile sstate :small-warehouse)]
+    [:td (building-tile sstate :large-warehouse)]
+    [:td (building-tile sstate :wharf)]]])
 
 (defn render-ship [size type]
   [:div.ship

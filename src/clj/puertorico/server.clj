@@ -16,7 +16,7 @@
 (defn bank-buildings []
   (into {}
         (for [[bname bdesc] common/initial-buildings]
-          [bname (select-keys bdesc [:resource :count :vp :gold :column])])))
+          [bname (select-keys bdesc [:resource :count :vp :gold :column :worker])])))
 
 (defn next-player [current-picker cstate]
   (nth (:order cstate) (mod (inc (.indexOf (:order cstate) current-picker)) (:nplayers cstate))))

@@ -1,5 +1,19 @@
 (ns puertorico.common)
 
+(defn money-after-building [sstate player b-name]
+  (let [building (get-in sstate [:bank :building b-name])
+        player-gold (get-in sstate [player :gold])
+        discount (min (:column building) (or (get-in sstate [player :field :quarry]) 0))
+        cost (:gold building)
+        cost (if (= player (:rolepicker sstate))
+               (dec cost)
+               cost)
+        cost (max 0 (- cost discount))
+        ]
+    (println b-name cost discount (- player-gold cost))
+    (if-not (pos? (:count building))
+      -1
+      (- player-gold cost))))
 
 (def role-descriptions {:captain "Goods for VP"
                         :trader "Goods for money"
