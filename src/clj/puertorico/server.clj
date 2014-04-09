@@ -3,6 +3,7 @@
             [ring.middleware.resource :as resources]
             [ring.util.response :as response]
             [ring.middleware.reload :refer [wrap-reload]]
+            [clojure.edn :as edn]
             [puertorico.util :as util]
             [puertorico.common :as common]
             [compojure.handler :refer [site]]
@@ -39,18 +40,25 @@
   (mod (inc current-picker) (:nplayers cstate)))
 
 (defmulti transition (fn [x & _] x))
+
 (defmethod transition :good [etype state [dest good-type amount]]
   (update-in state [dest etype good-type] (fnil + 0) amount))
+
 (defmethod transition :field [etype state [dest good-type amount]]
   (update-in state [dest etype good-type] (fnil + 0) amount))
+
 (defmethod transition :worker [etype state [dest amount]]
   (update-in state [dest etype] (fnil + 0) amount))
+
 (defmethod transition :vp [etype state [dest amount]]
   (update-in state [dest etype] (fnil + 0) amount))
+
 (defmethod transition :gold [etype state [dest amount]]
   (update-in state [dest etype] (fnil + 0) amount))
+
 (defmethod transition :building [etype state [dest buildings]]
   (assoc-in state [dest :building] buildings))
+
 (defmethod transition :add-player [etype state [pname]]
   (-> state
       (update-in [:order] conj pname)
@@ -67,7 +75,6 @@
 
 (defmethod transition :default [etype state & _]
   state)
-
 
 (defn calc-state []
   (let [estream @estream]
@@ -117,16 +124,22 @@
 
 (atom (apply create-game ["Kanwei" "Lauren" "Ted"]))
 
+(def connections (atom #{}))
+
+
 (defn ws-handler [req]
   (with-channel req channel
     (on-close channel (fn [status]
+                        (swap! connections disj channel)
                         (println "channel closed")))
-    (if (websocket? channel)
-      (println "WebSocket channel")
-      (println "HTTP channel"))
+    (swap! connections conj channel)
+    
     (send! channel (pr-str (calc-state)))
+    
     (on-receive channel (fn [data]
-                          (send! channel data))))) ; data is sent directly to the client
+                          (swap! estream conj (edn/read-string data))
+                          (doseq [chan @connections]
+                            (send! chan (pr-str (calc-state)))))))) ; data is sent directly to the client
 
 (defroutes pr-routes
   (GET "/ws" [] ws-handler))

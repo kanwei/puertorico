@@ -9,10 +9,13 @@
 (def estream (atom []))
 (def sstate (atom {}))
 
-(def ws (js/WebSocket. "ws://localhost:3000/ws"))
+(def ws (js/WebSocket. (str "ws://" (.-host js/location) "/ws")))
+
 (aset ws "onmessage" (fn [msg]
                        (reset! sstate (reader/read-string (.-data msg)))))
 
+(defn send-message [event]
+  (.send ws (pr-str event)))
 
 (defn circles [n]
   (repeat n
@@ -46,11 +49,6 @@
 (defn add-to-turn [event]
   (swap! game update-in [:turns] add-event-to-turn event))
 
-
-
-(defn action-done []
-  (swap! estream conj [:actiondone])) 
-
 (defn do-settler-action [field-type i]
   (when true
     (swap! game update-in [:players 0 :fields] conj field-type)
@@ -72,8 +70,7 @@
          [:worker (nth (:order sstate) (:role-picker sstate)) 1]))
 
 (defmethod player-pick-role :builder [role sstate]
-  (swap! estream conj 
-    [:rolepick :builder]))
+  (send-message [:rolepick :builder]))
 
 (defmethod player-pick-role :default [role sstate]
   nil)
