@@ -19,7 +19,7 @@
           [bname (select-keys bdesc [:resource :count :vp :gold :column])])))
 
 (defn next-player [current-picker cstate]
-  (mod (inc current-picker) (:nplayers cstate)))
+  (nth (:order cstate) (mod (inc (.indexOf (:order cstate) current-picker)) (:nplayers cstate))))
 
 (defmulti transition (fn [x & _] x))
 
@@ -44,16 +44,20 @@
 (defmethod transition :building [etype state [dest buildings]]
   (assoc-in state [dest :building] buildings))
 
+(defmethod transition :prospector [etype state [player]]
+  (-> state
+      (update-in [:actionpicker] next-player state)))
+
 (defmethod transition :add-player [etype state [pname]]
   (-> state
       (update-in [:order] conj pname)
       (update-in [:nplayers] inc)
       (assoc-in [pname] {:name pname :worker 0 :gold 0 :vp 0 :field {} :building {}})))
 
-(defmethod transition :rolepick [etype state [role]]
+(defmethod transition :rolepick [etype state [role player]]
   (-> state
-      (assoc-in [((:order state) (:role-picker state)) :role] role) 
-      (assoc :current-role role)))
+      (assoc :activerole role)
+      (assoc :actionpicker player)))
 
 (defmethod transition :actiondone [etype state]
   (update-in state [:action-picker] next-player state))
@@ -68,7 +72,6 @@
         (transition etype acc eargs))
       {:order []
        :nplayers 0
-       :governor 0
        :activerole nil
        :bank {:vp 0
               :field-count 0
@@ -97,6 +100,7 @@
           [:field p1 :indigo 1]
           
           [:initialize :rolepicker p1]
+          [:initialize :governor p1]
           
           [:add-player p2]
           [:gold p2 2]

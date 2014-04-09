@@ -159,9 +159,9 @@
 (defn player-boards [sstate]
   [:div.row
    [:h2 "Acting as player: " @acting-player]
-   (for [[pname player] (get-players sstate)]
+   (for [pname (:order sstate)]
      [:div.col-md-4 {:on-click #(reset! acting-player pname)}
-      (player-board pname player)])])
+      (player-board pname (get sstate pname))])])
 
 (defn disable-role? [role]
   (if (or (:activerole @sstate) (not= @acting-player (:rolepicker @sstate)))
@@ -171,7 +171,7 @@
   [:div
    (for [role (keys common/role-descriptions)]
      [:button.btn.btn-default.rolecard {:class (disable-role? role)
-                                        :on-click #(player-pick-role role sstate)}
+                                        :on-click #(send-message [:rolepick role @acting-player])}
       (name role)
       [:span " - " (role common/role-descriptions)]])])
 
@@ -194,9 +194,11 @@
                 (:available-fields current))
    [:h3 "Governor: " (:governor sstate)]
    [:h3 "Role picker: " (:rolepicker sstate)]
-   [:h3 "Current role: " (str (:active sstate))]
+   [:h3 "Current role: " (str (:activerole sstate))]
    [:h3 "Action picker: " (:actionpicker sstate)]
-   [:button.btn.btn-success {:on-click action-done} "Pass"]
+   (if (and (= (:rolepicker sstate) @acting-player) (= (:actionpicker sstate) @acting-player) (= (:activerole sstate) :prospector))
+     [:button.btn.btn-success {:on-click #(send-message [:prospector @acting-player])} "Get $"])
+   #_[:button.btn.btn-success {:on-click action-done} "Pass"]
    ])
 
 (defn game-state []
