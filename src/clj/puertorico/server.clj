@@ -59,6 +59,8 @@
 
 (defmethod transition :rolepick [etype state [role player]]
   (-> state
+      (assoc-in [player :role] role)
+      (update-in [:roles] disj role)
       (assoc :activerole role)
       (assoc :actionpicker player)))
 
@@ -108,6 +110,8 @@
           [:initialize :rolepicker p1]
           [:initialize :governor p1]
           
+          [:initialize :roles (set (keys common/role-descriptions))]
+          
           [:add-player p2]
           [:gold p2 2]
           [:field p2 :indigo 1]
@@ -136,7 +140,7 @@
        [:building :bank (bank-buildings)]
        
        )
-  (apply create-game ["Kanwei" "Lauren" "Ted"]))
+  (apply create-game ["Kanwei" "Adam" "Ted"]))
 
 (reset-game)
 

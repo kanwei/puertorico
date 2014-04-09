@@ -164,7 +164,7 @@
       (player-board pname (get sstate pname))])])
 
 (defn disable-role? [role]
-  (if (or (:activerole @sstate) (not= @acting-player (:rolepicker @sstate)))
+  (if (or (not (contains? (:roles @sstate) role)) (:activerole @sstate) (not= @acting-player (:rolepicker @sstate)))
     "disabled"))
 
 (defn render-roles [sstate]
