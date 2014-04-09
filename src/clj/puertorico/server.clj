@@ -81,6 +81,7 @@
        :nplayers 0
        :actionturns 0
        :activerole nil
+       :seed (System/currentTimeMillis)
        :bank {:vp 0
               :field-count 0
               :building nil}}
