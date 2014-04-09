@@ -44,8 +44,11 @@
 (defmethod transition :building [etype state [dest buildings]]
   (assoc-in state [dest :building] buildings))
 
+
 (defmethod transition :prospector [etype state [player]]
   (-> state
+      (update-in [player :gold] (fn [g] (if (= player (:rolepicker state)) (inc g) g)))
+      (update-in [:actionturns] inc)
       (update-in [:actionpicker] next-player state)))
 
 (defmethod transition :add-player [etype state [pname]]
@@ -59,19 +62,22 @@
       (assoc :activerole role)
       (assoc :actionpicker player)))
 
-(defmethod transition :actiondone [etype state]
-  (update-in state [:action-picker] next-player state))
-
 (defmethod transition :default [etype state & _]
   state)
 
 (defn calc-state []
   (let [estream @estream]
     (reduce 
-      (fn [acc [etype & eargs]]
-        (transition etype acc eargs))
+      (fn [state [etype & eargs]]
+        (let [transitioned (transition etype state eargs)]
+          (if (and (:activerole state) (= (:actionturns state) (dec (:nplayers state))))
+            (-> transitioned
+                (assoc :actionturns 0 :activerole nil :actionpicker nil)
+                (update-in [:rolepicker] next-player transitioned))
+            transitioned)))
       {:order []
        :nplayers 0
+       :actionturns 0
        :activerole nil
        :bank {:vp 0
               :field-count 0

@@ -175,6 +175,12 @@
       (name role)
       [:span " - " (role common/role-descriptions)]])])
 
+(defn prospector-buttons [sstate]
+  (if (and (= :prospector (:activerole sstate)) (= (:actionpicker sstate) @acting-player))
+    (if (= @acting-player (:rolepicker sstate) )
+      [:button.btn.btn-success {:on-click #(send-message [:prospector @acting-player])} "Get $"]
+      [:button.btn.btn-success {:on-click #(send-message [:prospector @acting-player])} "Pass"])))
+
 (defn supply-board [sstate]
   [:div
    [:button.btn.btn-danger {:on-click #(send-message :reset)} "RESET"]
@@ -196,9 +202,7 @@
    [:h3 "Role picker: " (:rolepicker sstate)]
    [:h3 "Current role: " (str (:activerole sstate))]
    [:h3 "Action picker: " (:actionpicker sstate)]
-   (if (and (= (:rolepicker sstate) @acting-player) (= (:actionpicker sstate) @acting-player) (= (:activerole sstate) :prospector))
-     [:button.btn.btn-success {:on-click #(send-message [:prospector @acting-player])} "Get $"])
-   #_[:button.btn.btn-success {:on-click action-done} "Pass"]
+   (prospector-buttons sstate)
    ])
 
 (defn game-state []
