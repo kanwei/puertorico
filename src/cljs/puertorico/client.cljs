@@ -80,8 +80,15 @@
 (defn buy-button [b-name sstate acting-player]
   (if (and (= :builder (:activerole sstate)) 
            (= (:actionpicker sstate) acting-player)
+           (not (contains? (get-in sstate [acting-player :building]) b-name))
            (>= (common/money-after-building sstate acting-player b-name) 0))
     [:button.btn.btn-success.btn-xs {:on-click #(send-message [:buy-building acting-player b-name])} "Buy"]))
+
+(defn pass-button [sstate]
+  (if (and
+        (contains? #{:settler :builder :trader} (:activerole sstate))
+        (= (:actionpicker sstate) @acting-player))
+  [:button.btn.btn-success {:on-click #(send-message [:pass @acting-player])} "Pass"]))
 
 (defn building-tile [sstate b-name]
   (let [building (get-in sstate [:bank :building b-name])]
@@ -156,7 +163,7 @@
     [:h5 "Workers: " (:worker player)]
     [:h5 "Buildings"]
     (for [building (:building player)]
-      [:div (:name building)])
+      [:div (name building)])
     [:h5 "Fields"]
     (for [[ftype fnum] (:field player)
           i (range fnum)]
@@ -195,21 +202,23 @@
    [:div "Worker Supply: " (get-in sstate [:bank :worker])]
    [:div "Worker Ship: " (get-in sstate [:worker-ship :worker])]
    [:h3 "Ships"]
-   (for [ship (:ships current)]
+   (for [ship (:ship sstate)]
      (render-ship ship nil))
-   [:h3 "Trader"] (render-trader (:trader current))
+   [:h3 "Trader"] (render-trader (:trader sstate))
    [:h3 "Fields"]
-   [:div.quarry.field {:on-click #(do-settler :quarry nil)} (:quarry current) " Q"]
+   [:div.quarry.field {:on-click #(do-settler :quarry nil)} (get-in sstate [:bank :field :quarry]) " Q"]
    (map-indexed (fn [i field]
                   [:div.field {:class (name field)
                                :on-click #(do-settler field i)} (name field)]
                   )
-                (:available-fields current))
+                (:fieldtiles sstate))
    [:h3 "Governor: " (:governor sstate)]
    [:h3 "Role picker: " (:rolepicker sstate)]
    [:h3 "Current role: " (str (:activerole sstate))]
    [:h3 "Action picker: " (:actionpicker sstate)]
    (prospector-buttons sstate)
+   (pass-button sstate)
+   [:button.btn.btn-success {:on-click #(randomize-fields sstate)} "Randomize"]
    ])
 
 (defn game-state []

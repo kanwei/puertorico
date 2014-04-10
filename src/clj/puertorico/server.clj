@@ -38,12 +38,23 @@
 (defmethod transition :vp [etype state [dest amount]]
   (update-in state [dest etype] (fnil + 0) amount))
 
+(defmethod transition :fieldtile [etype state [ftype]]
+  (update-in state [:fieldtiles] conj ftype))
+
 (defmethod transition :gold [etype state [dest amount]]
   (update-in state [dest etype] (fnil + 0) amount))
 
 (defmethod transition :building [etype state [dest buildings]]
   (assoc-in state [dest :building] buildings))
 
+(defmethod transition :buy-building [etype state [player b-name]]
+  (let [new-gold (common/money-after-building state player b-name)]
+    (-> state
+        (update-in [player :building] conj b-name)
+        (assoc-in [player :gold] new-gold)
+        (update-in [:bank :building b-name :count] dec)
+        (update-in [:actionturns] inc)
+        (update-in [:actionpicker] next-player state))))
 
 (defmethod transition :prospector [etype state [player]]
   (-> state
@@ -51,11 +62,16 @@
       (update-in [:actionturns] inc)
       (update-in [:actionpicker] next-player state)))
 
+(defmethod transition :pass [etype state [player]]
+  (-> state
+      (update-in [:actionturns] inc)
+      (update-in [:actionpicker] next-player state)))
+
 (defmethod transition :add-player [etype state [pname]]
   (-> state
       (update-in [:order] conj pname)
       (update-in [:nplayers] inc)
-      (assoc-in [pname] {:name pname :worker 0 :gold 0 :vp 0 :field {} :building {}})))
+      (assoc-in [pname] {:name pname :worker 0 :gold 0 :vp 0 :field {} :building #{}})))
 
 (defmethod transition :rolepick [etype state [role player]]
   (-> state
@@ -68,24 +84,34 @@
   state)
 
 (defn calc-state []
-  (let [estream @estream]
+  (let [cstream @estream]
     (reduce 
       (fn [state [etype & eargs]]
-        (let [transitioned (transition etype state eargs)]
-          (if (and (:activerole state) (= (:actionturns state) (dec (:nplayers state))))
-            (-> transitioned
-                (assoc :actionturns 0 :activerole nil :actionpicker nil)
-                (update-in [:rolepicker] next-player transitioned))
-            transitioned)))
+        (let [transitioned (transition etype state eargs)
+              checked-turn
+              (if (and (:activerole state) (= (:actionturns state) (dec (:nplayers state))))
+                (-> transitioned
+                    (assoc :actionturns 0 :activerole nil :actionpicker nil)
+                    (update-in [:rolepicker] next-player transitioned))
+                transitioned)
+              checked-fields
+              (if (and (= :startgame etype) (empty? (:fieldtiles checked-turn)))
+                (let [random-fields (common/randomize-fields checked-turn)]
+                  (doseq [ftype random-fields]
+                    (swap! estream conj [:fieldtile ftype] [:field :bank ftype -1]))
+                  checked-turn)
+                checked-turn)
+              ]
+          checked-fields))
       {:order []
        :nplayers 0
        :actionturns 0
        :activerole nil
-       :seed (System/currentTimeMillis)
+       :fieldtiles []
        :bank {:vp 0
               :field-count 0
               :building nil}}
-        estream)))
+        cstream)))
 
 (defn get-players [state]
   (into {}
@@ -120,6 +146,8 @@
           [:add-player p3]
           [:gold p3 1]
           [:field p3 :corn 1]
+          
+          [:startgame]
           )))
 
 (defn reset-game []
@@ -151,23 +179,6 @@
          [:worker :bank -1]
          #_[:worker (nth (:order sstate) (:role-picker sstate)) 1]))
 
-#_(defn buy-building [b-name sstate]
-  (println "Trying to buy " b-name)
-  (let [apicker (:action-picker sstate)
-        building (get-in sstate [:bank :building b-name])
-        discount (max (:column building) (num-quarries (:action-picker sstate)))
-        cost (:gold building)
-        cost (if (= apicker (:role-picker sstate))
-               (dec cost)
-               cost)
-        cost (max 0 (- cost discount))
-        ]
-    (swap! estream conj
-           [:buy-building b-name apicker]
-           [:gold ((:order sstate) apicker) (- cost)]
-           )
-  ))
-
 (def connections (atom #{}))
 
 
@@ -181,12 +192,14 @@
     (send! channel (pr-str (calc-state)))
     
     (on-receive channel (fn [data]
-                          (let [parsed (edn/read-string data)]
+                          (let [parsed (edn/read-string data)
+                                new-state (calc-state)
+                                new-state (calc-state)]
                             (if (= :reset parsed)
                               (reset-game)
                               (swap! estream conj parsed))
                             (doseq [chan @connections]
-                              (send! chan (pr-str (calc-state)))))))))
+                              (send! chan (pr-str new-state))))))))
 
 (defroutes pr-routes
   (GET "/ws" [] ws-handler))

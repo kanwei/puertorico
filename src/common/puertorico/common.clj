@@ -15,6 +15,14 @@
       -1
       (- player-gold cost))))
 
+(defn randomize-fields [sstate]
+  (->> (for [[fieldtype fieldcount] (get-in sstate [:bank :field])]
+        (repeat fieldcount fieldtype))
+       concat
+       flatten
+       shuffle
+       (take 4)))
+
 (def role-descriptions {:captain "Goods for VP"
                         :trader "Goods for money"
                         :builder "Construct"
