@@ -83,39 +83,47 @@
 (defmethod transition :default [etype state & _]
   state)
 
-(defn calc-state []
-  (let [cstream @estream]
-    (reduce 
-      (fn [state [etype & eargs]]
-        (let [transitioned (transition etype state eargs)
-              checked-turn
-              (if (and (:activerole state) (= (:actionturns state) (dec (:nplayers state))))
-                (-> transitioned
-                    (assoc :actionturns 0 :activerole nil :actionpicker nil)
-                    (update-in [:rolepicker] next-player transitioned))
-                transitioned)
-              checked-fields
-              (if (and (= :startgame etype) (empty? (:fieldtiles checked-turn)))
-                (let [random-fields (common/randomize-fields checked-turn)]
-                  (doseq [ftype random-fields]
-                    (swap! estream conj [:fieldtile ftype] [:field :bank ftype -1]))
-                  checked-turn)
-                checked-turn)
-              ]
-          checked-fields))
-      {:order []
-       :nplayers 0
-       :actionturns 0
-       :activerole nil
-       :fieldtiles []
-       :bank {:vp 0
-              :field-count 0
-              :building nil}}
-        cstream)))
+(defn calc-state [cstream]
+  (reduce 
+    (fn [state [etype & eargs]]
+      (transition etype state eargs))
+    {:order []
+     :nplayers 0
+     :actionturns 0
+     :activerole nil
+     :fieldtiles []
+     :bank {:vp 0
+            :field-count 0
+            :building nil}}
+      cstream))
+
+; (let [
+;               checked-turn
+;               (if (and (:activerole state) (= (:actionturns state) (dec (:nplayers state))))
+;                 (-> transitioned
+;                     (assoc :actionturns 0 :activerole nil :actionpicker nil)
+;                     (update-in [:rolepicker] next-player transitioned))
+;                 transitioned)
+;               checked-fields
+;               (if (and (= :startgame etype) (empty? (:fieldtiles checked-turn)))
+;                 (let [random-fields (common/randomize-fields checked-turn)]
+;                   (doseq [ftype random-fields]
+;                     (swap! estream conj [:fieldtile ftype] [:field :bank ftype -1]))
+;                   checked-turn)
+;                 checked-turn)
+;               ]
+;           checked-fields)
 
 (defn get-players [state]
   (into {}
         (remove (fn [[k v]] (keyword? k)) state)))
+
+
+(defn check-fields [state]
+  (if (zero? (count (:fieldtiles state)))
+    (let [random-fields (common/randomize-fields state)]
+      (doseq [ftype random-fields]
+        (swap! estream conj [:fieldtile ftype] [:field :bank ftype -1])))))
 
 (defn create-game
   ([p1 p2 p3]
@@ -181,7 +189,9 @@
 
 (def connections (atom #{}))
 
-
+(defn estream-handler [k r os ns]
+  (println k))
+  
 (defn ws-handler [req]
   (with-channel req channel
     (on-close channel (fn [status]
@@ -189,12 +199,15 @@
                         (println "channel closed")))
     (swap! connections conj channel)
     
-    (send! channel (pr-str (calc-state)))
+    (add-watch estream :estream estream-handler)
+    
+    (send! channel (pr-str (calc-state @estream)))
     
     (on-receive channel (fn [data]
                           (let [parsed (edn/read-string data)
-                                new-state (calc-state)
-                                new-state (calc-state)]
+                                new-state (calc-state @estream)
+                                cf (check-fields new-state)
+                                new-state (calc-state @estream)]
                             (if (= :reset parsed)
                               (reset-game)
                               (swap! estream conj parsed))
