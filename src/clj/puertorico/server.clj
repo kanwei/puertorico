@@ -181,6 +181,14 @@
 
 (reset-game)
 
+(defn do-until-stable []
+  (let [state (calc-state)]
+    (check-fields state)
+    (if (= (calc-state) state)
+      state
+      (recur)
+    )))
+
 (defn do-mayor []
   (swap! estream conj 
          [:rolepick :mayor]
@@ -192,8 +200,6 @@
 (defn estream-handler [k r os ns]
   (println k))
 
-(check-fields (calc-state))
-
 (defn ws-handler [req]
   (with-channel req channel
     (on-close channel (fn [status]
@@ -204,7 +210,7 @@
     (add-watch estream :estream estream-handler)
     
     (send! channel 
-           (pr-str (calc-state)))
+           (pr-str (do-until-stable)))
     
     (on-receive channel (fn [client-data]
                           (let [client-data (edn/read-string client-data)]
@@ -212,7 +218,7 @@
                               (reset-game)
                               (swap! estream conj client-data))
                             (doseq [chan @connections]
-                              (send! chan (pr-str (calc-state)))))))))
+                              (send! chan (pr-str (do-until-stable)))))))))
 
 (defroutes pr-routes
   (GET "/ws" [] ws-handler))

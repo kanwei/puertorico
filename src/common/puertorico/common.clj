@@ -10,7 +10,6 @@
                cost)
         cost (max 0 (- cost discount))
         ]
-    (println b-name cost discount (- player-gold cost))
     (if-not (pos? (:count building))
       -1
       (- player-gold cost))))
@@ -20,6 +19,7 @@
         (repeat fieldcount fieldtype))
        concat
        flatten
+       (remove #(= :quarry %))
        shuffle
        (take 4)))
 
