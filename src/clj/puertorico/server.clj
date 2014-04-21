@@ -83,7 +83,7 @@
 (defmethod transition :default [etype state & _]
   state)
 
-(defn calc-state [cstream]
+(defn calc-state []
   (reduce 
     (fn [state [etype & eargs]]
       (transition etype state eargs))
@@ -95,7 +95,7 @@
      :bank {:vp 0
             :field-count 0
             :building nil}}
-      cstream))
+      @estream))
 
 ; (let [
 ;               checked-turn
@@ -191,7 +191,9 @@
 
 (defn estream-handler [k r os ns]
   (println k))
-  
+
+(check-fields (calc-state))
+
 (defn ws-handler [req]
   (with-channel req channel
     (on-close channel (fn [status]
@@ -201,18 +203,16 @@
     
     (add-watch estream :estream estream-handler)
     
-    (send! channel (pr-str (calc-state @estream)))
+    (send! channel 
+           (pr-str (calc-state)))
     
-    (on-receive channel (fn [data]
-                          (let [parsed (edn/read-string data)
-                                new-state (calc-state @estream)
-                                cf (check-fields new-state)
-                                new-state (calc-state @estream)]
-                            (if (= :reset parsed)
+    (on-receive channel (fn [client-data]
+                          (let [client-data (edn/read-string client-data)]
+                            (if (= :reset client-data)
                               (reset-game)
-                              (swap! estream conj parsed))
+                              (swap! estream conj client-data))
                             (doseq [chan @connections]
-                              (send! chan (pr-str new-state))))))))
+                              (send! chan (pr-str (calc-state)))))))))
 
 (defroutes pr-routes
   (GET "/ws" [] ws-handler))
