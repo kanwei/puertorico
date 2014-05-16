@@ -218,7 +218,6 @@
    [:h3 "Action picker: " (:actionpicker sstate)]
    (prospector-buttons sstate)
    (pass-button sstate)
-   [:button.btn.btn-success {:on-click #(randomize-fields sstate)} "Randomize"]
    ])
 
 (defn game-state []

@@ -59,8 +59,7 @@
 (defmethod transition :prospector [etype state [player]]
   (-> state
       (update-in [player :gold] (fn [g] (if (= player (:rolepicker state)) (inc g) g)))
-      (update-in [:actionturns] inc)
-      (update-in [:actionpicker] next-player state)))
+      (assoc :roledone true)))
 
 (defmethod transition :pass [etype state [player]]
   (-> state
@@ -92,6 +91,7 @@
      :actionturns 0
      :activerole nil
      :fieldtiles []
+     :rounds []
      :bank {:vp 0
             :field-count 0
             :building nil}}
@@ -118,12 +118,15 @@
   (into {}
         (remove (fn [[k v]] (keyword? k)) state)))
 
-
 (defn check-fields [state]
   (if (zero? (count (:fieldtiles state)))
     (let [random-fields (common/randomize-fields state)]
       (doseq [ftype random-fields]
         (swap! estream conj [:fieldtile ftype] [:field :bank ftype -1])))))
+
+(defn check-prospector [state]
+  (when (= :prospector (:activerole state))
+    (swap! estream conj [:gold (:rolepicker state) 1] [:initialize :activerole nil])))
 
 (defn create-game
   ([p1 p2 p3]
@@ -184,6 +187,7 @@
 (defn do-until-stable []
   (let [state (calc-state)]
     (check-fields state)
+    (check-prospector state)
     (if (= (calc-state) state)
       state
       (recur)
@@ -197,17 +201,12 @@
 
 (def connections (atom #{}))
 
-(defn estream-handler [k r os ns]
-  (println k))
-
 (defn ws-handler [req]
   (with-channel req channel
     (on-close channel (fn [status]
                         (swap! connections disj channel)
                         (println "channel closed")))
     (swap! connections conj channel)
-    
-    (add-watch estream :estream estream-handler)
     
     (send! channel 
            (pr-str (do-until-stable)))
