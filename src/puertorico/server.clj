@@ -83,7 +83,7 @@
   state)
 
 (defn calc-state []
-  (reduce 
+  (reduce
     (fn [state [etype & eargs]]
       (transition etype state eargs))
     {:order []
@@ -133,31 +133,31 @@
    (swap! estream conj
           [:vp :bank 75]
           [:worker :bank 55]
-          
+
           [:worker :worker-ship 3]
           [:worker :bank -3]
-          
+
           [:ship 0 4]
           [:ship 1 5]
           [:ship 2 6]
-          
+
           [:add-player p1]
           [:gold p1 2]
           [:field p1 :indigo 1]
-          
+
           [:initialize :rolepicker p1]
           [:initialize :governor p1]
-          
+
           [:initialize :roles (set (keys common/role-descriptions))]
-          
+
           [:add-player p2]
           [:gold p2 2]
           [:field p2 :indigo 1]
-          
+
           [:add-player p3]
           [:gold p3 1]
           [:field p3 :corn 1]
-          
+
           [:startgame]
           )))
 
@@ -169,16 +169,16 @@
        [:good :bank :corn 10]
        [:good :bank :sugar 11]
        [:good :bank :indigo 11]
-       
+
        [:field :bank :quarry 8]
        [:field :bank :coffee 8]
        [:field :bank :tobacco 9]
        [:field :bank :corn 10]
        [:field :bank :sugar 11]
        [:field :bank :indigo 12]
-       
+
        [:building :bank (bank-buildings)]
-       
+
        )
   (apply create-game ["Kanwei" "Adam" "Ted"]))
 
@@ -194,7 +194,7 @@
     )))
 
 (defn do-mayor []
-  (swap! estream conj 
+  (swap! estream conj
          [:rolepick :mayor]
          [:worker :bank -1]
          #_[:worker (nth (:order sstate) (:role-picker sstate)) 1]))
@@ -207,10 +207,10 @@
                         (swap! connections disj channel)
                         (println "channel closed")))
     (swap! connections conj channel)
-    
-    (send! channel 
+
+    (send! channel
            (pr-str (do-until-stable)))
-    
+
     (on-receive channel (fn [client-data]
                           (let [client-data (edn/read-string client-data)]
                             (if (= :reset client-data)
@@ -222,11 +222,10 @@
 (defroutes pr-routes
   (GET "/ws" [] ws-handler))
 
-(def app 
+(def app
   (-> pr-routes
       wrap-reload
       (resources/wrap-resource "public")))
 
 (defn -main [& args]
-  (run-server app {:port 3000}))
-
+  (run-server app {:port 5000}))

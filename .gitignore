@@ -7,3 +7,11 @@ pom.xml
 .lein-deps-sum
 resources/public/js/cljs.js
 resources/public/js/cljs
+.idea
+*.iml
+.shadow-cljs/
+node_modules/
+.nrepl-port
+resources/public/js/cljs-runtime/
+resources/public/js/manifest.edn
+resources/public/js/puertorico-client.js

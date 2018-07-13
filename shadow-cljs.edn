@@ -1,0 +1,9 @@
+{
+ :source-paths ["src"]
+ :builds       {:puertorico-client {:target           :browser
+                                    :devtools         {:autoload false
+                                                       :enabled  false
+                                                       #_#_:console-support false}
+                                    :modules          {:puertorico-client {:entries [puertorico.client]}}
+                                    :output-dir       "resources/public/js"
+                                    :compiler-options {:infer-externs :auto}}}}
