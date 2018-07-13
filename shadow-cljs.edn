@@ -1,5 +1,4 @@
-{
- :source-paths ["src"]
+{:source-paths ["src"]
  :builds       {:puertorico-client {:target           :browser
                                     :devtools         {:autoload false
                                                        :enabled  false

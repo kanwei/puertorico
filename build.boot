@@ -74,7 +74,8 @@
          []
          (lein-generate)
          (comp
-           #_(eval '(do (require '[puertorico.server :as server])))
+           (eval '(do (require '[puertorico.prboot :as prboot])
+                      (prboot/initialize-dev)))
            (shadow-dev)
            (repl :port 63001
                  :server true)
@@ -93,7 +94,7 @@
            #_(cljs :optimizations :advanced
                    :compiler-options {:output-wrapper true})
            (sass :output-style :compressed)
-           (cljs/release :builds #{:puertorico-client})
+           #_(cljs/release :builds #{:puertorico-client})
            (aot)
            #_(pom)
            (uber)
